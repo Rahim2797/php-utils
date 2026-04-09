@@ -151,6 +151,8 @@ intellijPlatformTesting {
                         "-Dide.mac.message.dialogs.as.sheets=false",
                         "-Djb.privacy.policy.text=<!--999.999-->",
                         "-Djb.consents.confirmation.enabled=false",
+                        "-Didea.is.internal=true",
+                        "-Didea.log.debug.categories=com.github.rahim2797"
                     )
                 }
             }
