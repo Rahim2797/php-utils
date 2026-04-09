@@ -6,6 +6,7 @@ import com.intellij.psi.PsiPolyVariantReferenceBase
 import com.intellij.psi.ResolveResult
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.Field
+import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 class PropertiesKeyReference(
@@ -14,7 +15,7 @@ class PropertiesKeyReference(
     private val targetFqn: String
 ) : PsiPolyVariantReferenceBase<StringLiteralExpression>(
     literal,
-    TextRange(1, literal.textLength - 1), // inside quotes
+    keyRangeInLiteral(literal),
     true
 ) {
     override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
@@ -24,7 +25,7 @@ class PropertiesKeyReference(
         val results = mutableListOf<ResolveResult>()
 
         for (phpClass in phpIndex.getClassesByFQN(targetFqn)) {
-            val field = phpClass.findFieldByName(key, false)
+            val field = findMatchingField(phpClass, key)
             if (field != null) {
                 results += PsiElementResolveResult(field)
             }
@@ -34,9 +35,7 @@ class PropertiesKeyReference(
     }
 
     override fun resolve(): Field? {
-        return multiResolve(false)
-            .mapNotNull { it.element as? Field }
-            .firstOrNull()
+        return multiResolve(false).firstNotNullOfOrNull { it.element as? Field }
     }
 
     override fun getVariants(): Array<Any> {
@@ -46,9 +45,31 @@ class PropertiesKeyReference(
         return phpIndex.getClassesByFQN(targetFqn)
             .asSequence()
             .flatMap { it.fields.asSequence() }
+            .filterNot { it.name.isBlank() }
             .map { it.name }
             .distinct()
+            .sorted()
             .toList()
             .toTypedArray()
+    }
+
+    private fun findMatchingField(phpClass: PhpClass, fieldName: String): Field? {
+        phpClass.findFieldByName(fieldName, false)?.let { return it }
+
+        return phpClass.fields.firstOrNull { it.name == fieldName }
+    }
+
+    companion object {
+        private fun keyRangeInLiteral(literal: StringLiteralExpression): TextRange {
+            val text = literal.text
+            if (text.length >= 2 && (
+                    (text.startsWith("'") && text.endsWith("'")) ||
+                    (text.startsWith("\"") && text.endsWith("\""))
+                )
+            ) {
+                return TextRange(1, text.length - 1)
+            }
+            return TextRange(0, text.length)
+        }
     }
 }

@@ -19,6 +19,10 @@ class PropertiesKeyReferenceContributor : PsiReferenceContributor() {
                     val receiver = PsiGuards.getArrayAccessReceiver(literal) ?: return PsiReference.EMPTY_ARRAY
                     val targetFqn = PropertiesTypeInspector.extractTargetFqn(receiver.type) ?: return PsiReference.EMPTY_ARRAY
                     val key = literal.contents
+                    if (key.isBlank()) {
+                        return PsiReference.EMPTY_ARRAY
+                    }
+
                     DebugUtil.warn("Matched Properties<T> receiver=${receiver.text} target=$targetFqn key=$key")
 
                     return arrayOf(
