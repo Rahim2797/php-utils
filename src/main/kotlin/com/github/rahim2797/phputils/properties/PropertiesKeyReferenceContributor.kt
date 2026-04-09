@@ -5,7 +5,7 @@ import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
-class PropertiesKeyReferenceContributor: PsiReferenceContributor() {
+class PropertiesKeyReferenceContributor : PsiReferenceContributor() {
     override fun registerReferenceProviders(registrar: PsiReferenceRegistrar) {
         registrar.registerReferenceProvider(
             PlatformPatterns.psiElement(StringLiteralExpression::class.java),
@@ -18,10 +18,12 @@ class PropertiesKeyReferenceContributor: PsiReferenceContributor() {
 
                     val receiver = PsiGuards.getArrayAccessReceiver(literal) ?: return PsiReference.EMPTY_ARRAY
                     val targetFqn = PropertiesTypeInspector.extractTargetFqn(receiver.type) ?: return PsiReference.EMPTY_ARRAY
+                    val key = literal.contents
+                    DebugUtil.warn("Matched Properties<T> receiver=${receiver.text} target=$targetFqn key=$key")
 
-                    DebugUtil.warn("Matched Properties<T> receiver=${receiver.text} target=$targetFqn key=${literal.contents}")
-
-                    return PsiReference.EMPTY_ARRAY
+                    return arrayOf(
+                        PropertiesKeyReference(literal, key, targetFqn)
+                    )
                 }
             }
         )
