@@ -8,25 +8,25 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 object DebugUtil {
-    private val log = Logger.getInstance("com.github.rahim2797")
+    private val log = Logger.getInstance(DebugUtil::class.java)
 
     fun logArrayKeyContext(literal: StringLiteralExpression) {
-        this.debug("---- ARRAY KEY LITERAL ----")
-        this.debug("literal text     = ${literal.text}")
-        this.debug("literal contents = ${literal.contents}")
-        this.debug("literal class    = ${literal.javaClass.name}")
-        this.debug("parent class     = ${literal.parent?.javaClass?.name}")
+        this.warn("---- ARRAY KEY LITERAL ----")
+        this.warn("literal text     = ${literal.text}")
+        this.warn("literal contents = ${literal.contents}")
+        this.warn("literal class    = ${literal.javaClass.name}")
+        this.warn("parent class     = ${literal.parent?.javaClass?.name}")
 
         val arrayAccess = PsiTreeUtil.getParentOfType(literal, ArrayAccessExpression::class.java, false) ?: return
         val receiver = arrayAccess.value as? PhpExpression ?: return
         val receiverType: PhpType = receiver.type
 
-        this.debug("receiver text    = ${receiver.text}")
-        this.debug("receiver class   = ${receiver.javaClass.name}")
-        this.debug("receiver type    = $receiverType")
+        this.warn("receiver text    = ${receiver.text}")
+        this.warn("receiver class   = ${receiver.javaClass.name}")
+        this.warn("receiver type    = $receiverType")
     }
 
-    fun debug(message: String) {
-        log.debug(message)
+    fun warn(message: String) {
+        log.warn(message)
     }
 }
