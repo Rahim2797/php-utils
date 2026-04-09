@@ -1,11 +1,7 @@
 package com.github.rahim2797.phputils.properties
 
 import com.intellij.patterns.PlatformPatterns
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiReference
-import com.intellij.psi.PsiReferenceContributor
-import com.intellij.psi.PsiReferenceProvider
-import com.intellij.psi.PsiReferenceRegistrar
+import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
@@ -20,11 +16,11 @@ class PropertiesKeyReferenceContributor: PsiReferenceContributor() {
                 ): Array<PsiReference> {
                     val literal = element as StringLiteralExpression
 
-                    if (!PsiGuards.isArrayKeyLiteral(literal)) {
-                        return PsiReference.EMPTY_ARRAY
-                    }
+                    val receiver = PsiGuards.getArrayAccessReceiver(literal) ?: return PsiReference.EMPTY_ARRAY
+                    val targetFqn = PropertiesTypeInspector.extractTargetFqn(receiver.type) ?: return PsiReference.EMPTY_ARRAY
 
-                    DebugUtil.logArrayKeyContext(literal)
+                    DebugUtil.warn("Matched Properties<T> receiver=${receiver.text} target=$targetFqn key=${literal.contents}")
+
                     return PsiReference.EMPTY_ARRAY
                 }
             }
