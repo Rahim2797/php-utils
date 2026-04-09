@@ -12,4 +12,8 @@
                 language="PHP"
                 implementation="com.github.rahim2797.phputils.properties.PropertiesKeyReferenceContributor"/>
     </extensions>
+
+    <extensions defaultExtensionNs="com.jetbrains">
+        <php.typeProvider4 implementation="com.github.rahim2797.phputils.properties.PropertiesArrayAccessTypeProvider"/>
+    </extensions>
 </idea-plugin>
