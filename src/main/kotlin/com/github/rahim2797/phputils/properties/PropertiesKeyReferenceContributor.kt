@@ -17,7 +17,11 @@ class PropertiesKeyReferenceContributor : PsiReferenceContributor() {
                     val literal = element as StringLiteralExpression
 
                     val receiver = PsiGuards.getArrayAccessReceiver(literal) ?: return PsiReference.EMPTY_ARRAY
-                    val targetFqn = PropertiesTypeInspector.extractTargetFqn(receiver.type) ?: return PsiReference.EMPTY_ARRAY
+
+                    val resolvedReceiverType = receiver.type.global(element.project)
+                    val targetFqn = PropertiesTypeInspector.extractTargetFqn(resolvedReceiverType)
+                        ?: return PsiReference.EMPTY_ARRAY
+
                     val key = literal.contents
                     if (key.isBlank()) {
                         return PsiReference.EMPTY_ARRAY

@@ -11,23 +11,23 @@ object DebugUtil {
     private val log = Logger.getInstance(DebugUtil::class.java)
 
     fun logArrayKeyContext(literal: StringLiteralExpression) {
-        this.warn("---- ARRAY KEY LITERAL ----")
-        this.warn("literal text     = ${literal.text}")
-        this.warn("literal contents = ${literal.contents}")
+        warn("---- ARRAY KEY LITERAL ----")
+        warn("literal text     = ${literal.text}")
+        warn("literal contents = ${literal.contents}")
+        warn("literal class    = ${literal.javaClass.name}")
+        warn("parent class     = ${literal.parent?.javaClass?.name}")
 
         val arrayAccess = PsiTreeUtil.getParentOfType(literal, ArrayAccessExpression::class.java, false) ?: return
         val receiver = arrayAccess.value as? PhpExpression ?: return
         val receiverType: PhpType = receiver.type
 
-        this.warn("receiver text    = ${receiver.text}")
-        this.warn("receiver type    = $receiverType")
+        warn("receiver text    = ${receiver.text}")
+        warn("receiver class   = ${receiver.javaClass.name}")
+        warn("receiver type    = $receiverType")
 
         for (raw in receiverType.types) {
-            this.warn("receiver raw type = $raw")
+            warn("receiver raw type = $raw")
         }
-
-        val targetFqn = PropertiesTypeInspector.extractTargetFqn(receiverType)
-        this.warn("properties target = $targetFqn")
     }
 
     fun warn(message: String) {

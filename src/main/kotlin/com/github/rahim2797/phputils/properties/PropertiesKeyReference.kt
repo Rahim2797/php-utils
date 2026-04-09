@@ -40,17 +40,7 @@ class PropertiesKeyReference(
 
     override fun getVariants(): Array<Any> {
         val project = element.project
-        val phpIndex = PhpIndex.getInstance(project)
-
-        return phpIndex.getClassesByFQN(targetFqn)
-            .asSequence()
-            .flatMap { it.fields.asSequence() }
-            .filterNot { it.name.isBlank() }
-            .map { it.name }
-            .distinct()
-            .sorted()
-            .toList()
-            .toTypedArray()
+        return PropertiesFieldResolver.getFieldNames(project, targetFqn).toTypedArray()
     }
 
     private fun findMatchingField(phpClass: PhpClass, fieldName: String): Field? {

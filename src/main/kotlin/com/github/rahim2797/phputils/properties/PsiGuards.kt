@@ -7,9 +7,12 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 object PsiGuards {
     fun getArrayAccessReceiver(literal: StringLiteralExpression): PhpExpression? {
-        val parent = PsiTreeUtil.getParentOfType(literal, ArrayAccessExpression::class.java, false) ?: return null
+        val parent = PsiTreeUtil.getParentOfType(literal, ArrayAccessExpression::class.java, false)
+            ?: return null
+
         val index = parent.index ?: return null
         if (index.value !== literal) return null
+
         return parent.value as? PhpExpression
     }
 
