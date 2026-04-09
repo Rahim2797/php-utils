@@ -53,6 +53,10 @@ dependencies {
 
 // Configure IntelliJ Platform Gradle Plugin - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html
 intellijPlatform {
+    // This project does not use GUI Designer forms or Java nullability instrumentation,
+    // so we can skip the instrumentCode task and avoid the JDK-specific Ant classpath issue.
+    instrumentCode = false
+
     pluginConfiguration {
         name = providers.gradleProperty("pluginName")
         version = providers.gradleProperty("pluginVersion")
