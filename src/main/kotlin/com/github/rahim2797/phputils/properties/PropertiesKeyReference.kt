@@ -39,8 +39,7 @@ class PropertiesKeyReference(
     }
 
     override fun getVariants(): Array<Any> {
-        val project = element.project
-        return PropertiesFieldResolver.getFieldNames(project, targetFqn).toTypedArray()
+        return PropertiesLookupElements.buildForLiteral(element, targetFqn)
     }
 
     private fun findMatchingField(phpClass: PhpClass, fieldName: String): Field? {

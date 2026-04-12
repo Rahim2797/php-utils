@@ -31,6 +31,10 @@ object PsiGuards {
         return PsiTreeUtil.getParentOfType(hash, ArrayCreationExpression::class.java, false)
     }
 
+    fun isArrayLiteralKeyContext(literal: StringLiteralExpression): Boolean {
+        return getOwningArrayCreation(literal) != null
+    }
+
     fun isArrayKeyLiteral(literal: StringLiteralExpression): Boolean {
         return getArrayAccessReceiver(literal) != null
     }
