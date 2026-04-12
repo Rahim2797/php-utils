@@ -78,8 +78,7 @@ class PropertiesInspectionSuppressor : InspectionSuppressor {
             // Add/remove based on what your log shows in your PhpStorm build.
             "PhpUnused",
         )
-        if (toolId in suppressedToolIds
-        ) return true
+        if (toolId in suppressedToolIds) return true
 
         val id = toolId.lowercase()
         return (
