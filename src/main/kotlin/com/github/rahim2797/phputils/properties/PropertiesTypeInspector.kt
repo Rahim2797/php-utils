@@ -28,7 +28,7 @@ object PropertiesTypeInspector {
         return inner.takeIf { it.isNotEmpty() }
     }
 
-    fun isPropertiesType(type: PhpType): Boolean {
+    fun containsPropertiesType(type: PhpType): Boolean {
         return extractTargetFqn(type) != null
     }
 }

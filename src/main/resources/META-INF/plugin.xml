@@ -11,6 +11,9 @@
         <psi.referenceContributor
                 language="PHP"
                 implementation="com.github.rahim2797.phputils.properties.PropertiesKeyReferenceContributor"/>
+        <lang.inspectionSuppressor
+                language="PHP"
+                implementationClass="com.github.rahim2797.phputils.properties.PropertiesInspectionSuppressor"/>
     </extensions>
 
     <extensions defaultExtensionNs="com.jetbrains">
