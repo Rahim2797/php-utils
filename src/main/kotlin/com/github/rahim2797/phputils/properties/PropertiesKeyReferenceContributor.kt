@@ -15,23 +15,28 @@ class PropertiesKeyReferenceContributor : PsiReferenceContributor() {
                     context: ProcessingContext
                 ): Array<PsiReference> {
                     val literal = element as StringLiteralExpression
+                    val key = literal.contents
 
-                    val receiver = PsiGuards.getArrayAccessReceiver(literal) ?: return PsiReference.EMPTY_ARRAY
-
-                    val resolvedReceiverType = receiver.type.global(element.project)
-                    val targetFqn = PropertiesTypeInspector.extractTargetFqn(resolvedReceiverType)
+                    val targetFqn =
+                        resolveArrayAccessTarget(literal)
+                            ?: resolveArrayLiteralTarget(literal)
                         ?: return PsiReference.EMPTY_ARRAY
 
-                    val key = literal.contents
-                    if (key.isBlank()) {
-                        return PsiReference.EMPTY_ARRAY
+                    return arrayOf(PropertiesKeyReference(literal, key, targetFqn))
                     }
 
-                    DebugUtil.warn("Matched Properties<T> receiver=${receiver.text} target=$targetFqn key=$key")
+                private fun resolveArrayAccessTarget(literal: StringLiteralExpression): String? {
+                    val receiver = PsiGuards.getArrayAccessReceiver(literal) ?: return null
 
-                    return arrayOf(
-                        PropertiesKeyReference(literal, key, targetFqn)
-                    )
+                    PropertiesTargetResolver.resolveTargetFqnLocally(receiver)?.let { return it }
+
+                    val resolvedReceiverType = receiver.type.global(literal.project)
+                    return PropertiesTypeInspector.extractTargetFqn(resolvedReceiverType)
+                }
+
+                private fun resolveArrayLiteralTarget(literal: StringLiteralExpression): String? {
+                    val arrayCreation = PsiGuards.getOwningArrayCreation(literal) ?: return null
+                    return PropertiesTargetResolver.resolveTargetFqnForArrayLiteral(arrayCreation)
                 }
             }
         )

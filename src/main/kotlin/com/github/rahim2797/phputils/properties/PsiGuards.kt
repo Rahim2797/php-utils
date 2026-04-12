@@ -1,11 +1,12 @@
 package com.github.rahim2797.phputils.properties
 
 import com.intellij.psi.util.PsiTreeUtil
-import com.jetbrains.php.lang.psi.elements.ArrayAccessExpression
-import com.jetbrains.php.lang.psi.elements.PhpExpression
-import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
+import com.jetbrains.php.lang.psi.elements.*
+
 
 object PsiGuards {
+    const val DUMMY_IDENTIFIER: String = "IntellijIdeaRulezzz "
+
     fun getArrayAccessReceiver(literal: StringLiteralExpression): PhpExpression? {
         val parent = PsiTreeUtil.getParentOfType(literal, ArrayAccessExpression::class.java, false)
             ?: return null
@@ -14,6 +15,20 @@ object PsiGuards {
         if (index.value !== literal) return null
 
         return parent.value as? PhpExpression
+    }
+
+    fun getDirectArrayHashElement(literal: StringLiteralExpression): PhpPsiElement? {
+        if (literal.contents.isBlank() || literal.contents == DUMMY_IDENTIFIER) {
+            return literal.parent as PhpPsiElement
+        }
+        val hash = PsiTreeUtil.getParentOfType(literal, ArrayHashElement::class.java, false) ?: return null
+        if (hash.key !== literal) return null
+        return hash
+    }
+
+    fun getOwningArrayCreation(literal: StringLiteralExpression): ArrayCreationExpression? {
+        val hash = getDirectArrayHashElement(literal) ?: return null
+        return PsiTreeUtil.getParentOfType(hash, ArrayCreationExpression::class.java, false)
     }
 
     fun isArrayKeyLiteral(literal: StringLiteralExpression): Boolean {

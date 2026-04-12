@@ -3,14 +3,111 @@ package com.github.rahim2797.phputils.properties
 import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
-import com.jetbrains.php.lang.psi.elements.AssignmentExpression
-import com.jetbrains.php.lang.psi.elements.PhpExpression
-import com.jetbrains.php.lang.psi.elements.Variable
+import com.jetbrains.php.lang.documentation.phpdoc.psi.tags.PhpDocParamTag
+import com.jetbrains.php.lang.documentation.phpdoc.psi.tags.PhpDocReturnTag
+import com.jetbrains.php.lang.documentation.phpdoc.psi.tags.PhpDocTag
+import com.jetbrains.php.lang.psi.elements.*
+import com.jetbrains.php.lang.psi.elements.Function
 
 object PropertiesTargetResolver {
 
     fun resolveTargetFqnLocally(receiver: PhpExpression): String? {
         return resolveTargetFqnLocally(receiver, mutableSetOf())
+    }
+
+    fun resolveTargetFqnForArrayLiteral(arrayCreation: ArrayCreationExpression): String? {
+        resolveFromAssignment(arrayCreation)?.let { return it }
+        resolveFromReturn(arrayCreation)?.let { return it }
+        resolveFromArgument(arrayCreation)?.let { return it }
+        return null
+    }
+
+    private fun resolveFromAssignment(arrayCreation: ArrayCreationExpression): String? {
+        val assignment = arrayCreation.parent as? AssignmentExpression ?: return null
+        if (assignment.value !== arrayCreation) return null
+
+        val target = assignment.variable as? PhpExpression ?: return null
+        return resolveTargetFqnLocally(target)
+    }
+
+    private fun resolveFromReturn(arrayCreation: ArrayCreationExpression): String? {
+        val phpReturn = arrayCreation.parent as? PhpReturn ?: return null
+        if (phpReturn.argument !== arrayCreation) return null
+
+        val function = PsiTreeUtil.getParentOfType(
+            phpReturn,
+            Function::class.java,
+            false,
+        ) ?: PsiTreeUtil.getParentOfType(
+            phpReturn,
+            Method::class.java,
+            false,
+        ) ?: return null
+
+        extractReturnTargetFqn(function)?.let { return it }
+
+        val returnType = function.type
+        PropertiesTypeInspector.extractTargetFqn(returnType)?.let { return it }
+        PropertiesTypeInspector.extractTargetFqn(returnType.global(function.project))?.let { return it }
+
+        return null
+    }
+
+    private fun resolveFromArgument(arrayCreation: ArrayCreationExpression): String? {
+        val paramList = arrayCreation.parent as? ParameterList ?: return null
+        val parameters = paramList.parameters
+        val argIndex = parameters.indexOfFirst { it === arrayCreation }
+        if (argIndex < 0) return null
+
+        val call = paramList.parent ?: return null
+
+        return when (call) {
+            is FunctionReference -> resolveCallArgumentTarget(call, argIndex)
+            is MethodReference -> resolveMethodArgumentTarget(call, argIndex)
+            else -> null
+        }
+    }
+
+    private fun resolveCallArgumentTarget(call: FunctionReference, argIndex: Int): String? {
+        for (resolved in call.resolveLocal()) {
+            val function = resolved as? Function ?: continue
+            extractParamTargetFqn(function, argIndex)?.let { return it }
+        }
+        return null
+    }
+
+    private fun resolveMethodArgumentTarget(call: MethodReference, argIndex: Int): String? {
+        for (resolved in call.multiResolve(false)) {
+            val method = resolved.element as? Method ?: continue
+            extractParamTargetFqn(method, argIndex)?.let { return it }
+        }
+        return null
+    }
+
+    private fun extractReturnTargetFqn(function: Function): String? {
+        val doc = function.docComment ?: PropertiesPhpDocUtils.previousPhpDoc(function) ?: return null
+        val returnTag = PsiTreeUtil.findChildrenOfType(doc, PhpDocTag::class.java)
+            .firstOrNull { it is PhpDocReturnTag } as? PhpDocReturnTag ?: return null
+
+        return PropertiesTypeInspector.extractTargetFqn(returnTag.declaredType)
+    }
+
+    private fun extractParamTargetFqn(function: Function, argIndex: Int): String? {
+        val parameter = function.parameters.getOrNull(argIndex) ?: return null
+
+        PropertiesTypeInspector.extractTargetFqn(parameter.type)?.let { return it }
+        PropertiesTypeInspector.extractTargetFqn(parameter.type.global(function.project))?.let { return it }
+
+        val doc = function.docComment ?: PropertiesPhpDocUtils.previousPhpDoc(function) ?: return null
+        val paramTags = PsiTreeUtil.findChildrenOfType(doc, PhpDocTag::class.java)
+            .filterIsInstance<PhpDocParamTag>()
+
+        val paramName = parameter.name
+        val matchingTag = paramTags.firstOrNull { tag ->
+            tag.text.contains("\$$paramName")
+        } ?: return null
+
+        return PropertiesTypeInspector.extractTargetFqn(matchingTag.declaredType)
     }
 
     private fun resolveTargetFqnLocally(
