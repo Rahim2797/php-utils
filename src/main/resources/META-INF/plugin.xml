@@ -6,6 +6,7 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.jetbrains.php</depends>
+    <depends>com.intellij.modules.lang</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <psi.referenceContributor
@@ -14,6 +15,9 @@
         <lang.inspectionSuppressor
                 language="PHP"
                 implementationClass="com.github.rahim2797.phputils.properties.PropertiesInspectionSuppressor"/>
+        <lang.documentationProvider
+                language="PHP"
+                implementationClass="com.github.rahim2797.phputils.properties.PropertiesDocumentationProvider"/>
     </extensions>
 
     <extensions defaultExtensionNs="com.jetbrains">
