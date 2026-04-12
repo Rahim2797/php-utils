@@ -1,81 +1,45 @@
 package com.github.rahim2797.phputils.properties
 
+import java.nio.charset.StandardCharsets
+import java.util.*
+
 object PropertiesArrayAccessTypeCodec {
     data class Payload(
         val receiverRawType: String,
         val key: String
     )
 
+    private val encoder = Base64.getUrlEncoder().withoutPadding()
+    private val decoder = Base64.getUrlDecoder()
+
     fun encode(receiverRawType: String, key: String): String {
-        return escape(receiverRawType) + "::" + escape(key)
+        val left = b64(receiverRawType)
+        val right = b64(key)
+        return "$left.$right"
     }
 
     fun decode(payload: String): Payload? {
-        val sep = findSeparator(payload)
-        if (sep < 0) return null
+        val sep = payload.indexOf('.')
+        if (sep <= 0 || sep >= payload.length - 1) return null
 
         val left = payload.substring(0, sep)
-        val right = payload.substring(sep + 2)
+        val right = payload.substring(sep + 1)
 
-        val receiverRawType = unescape(left)
-        val key = unescape(right)
-
-        if (receiverRawType.isEmpty() || key.isEmpty()) return null
-        return Payload(receiverRawType, key)
-    }
-
-    private fun findSeparator(s: String): Int {
-        var escaped = false
-        var i = 0
-
-        while (i < s.length - 1) {
-            val ch = s[i]
-
-            if (escaped) {
-                escaped = false
-            } else if (ch == '\\') {
-                escaped = true
-            } else if (ch == ':' && s[i + 1] == ':') {
-                return i
-            }
-
-            i++
-        }
-
-        return -1
-    }
-
-    private fun escape(s: String): String {
-        val out = StringBuilder(s.length)
-        for (ch in s) {
-            when (ch) {
-                '\\' -> out.append("\\\\")
-                ':' -> out.append("\\:")
-                else -> out.append(ch)
-            }
-        }
-        return out.toString()
-    }
-
-    private fun unescape(s: String): String {
-        val out = StringBuilder(s.length)
-        var escaped = false
-
-        for (ch in s) {
-            if (escaped) {
-                out.append(ch)
-                escaped = false
-            } else if (ch == '\\') {
-                escaped = true
-            } else {
-                out.append(ch)
+        return try {
+            Payload(
+                receiverRawType = unb64(left),
+                key = unb64(right)
+            )
+        } catch (_: IllegalArgumentException) {
+            null
             }
         }
 
-        if (escaped) {
-            out.append('\\')
+    private fun b64(value: String): String {
+        return encoder.encodeToString(value.toByteArray(StandardCharsets.UTF_8))
         }
 
-        return out.toString()
+    private fun unb64(value: String): String {
+        return String(decoder.decode(value), StandardCharsets.UTF_8)
     }
 }

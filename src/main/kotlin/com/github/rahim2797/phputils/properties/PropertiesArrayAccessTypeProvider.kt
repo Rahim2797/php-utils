@@ -20,21 +20,45 @@ class PropertiesArrayAccessTypeProvider : PhpTypeProvider4 {
         val key = keyLiteral.contents
         if (key.isBlank()) return null
 
+        // 1) Best case: resolve locally and return the final type directly.
+        val localTargetFqn = PropertiesTargetResolver.resolveTargetFqnLocally(receiver)
+        if (localTargetFqn != null) {
+            val field = PropertiesFieldResolver.findField(element.project, localTargetFqn, key)
+            val fieldType = field?.type
+            if (fieldType != null && fieldType.types.isNotEmpty()) {
+                DebugUtil.warn(
+                    "Array access getType local element=${element.text} " +
+                        "targetFqn=$localTargetFqn key=$key fieldType=$fieldType"
+                )
+                return fieldType
+            }
+        }
+
+        // 2) Fallback: defer using an opaque payload.
         val receiverType = receiver.type
         if (receiverType.types.isEmpty()) return null
 
         val result = PhpType()
 
         for (receiverRaw in receiverType.types) {
+            if (receiverRaw.isBlank()) continue
+
             val encoded = PropertiesArrayAccessTypeCodec.encode(receiverRaw, key)
             result.add("#${getKey()}$encoded")
         }
 
-        DebugUtil.warn("Array access getType element=${element.text} receiverType=$receiverType key=$key result=$result")
-        return result
+        DebugUtil.warn(
+            "Array access getType deferred element=${element.text} " +
+                "receiverType=$receiverType key=$key result=$result"
+        )
+
+        return if (result.types.isEmpty()) null else result
     }
 
     override fun complete(expression: String, project: Project): PhpType? {
+        DebugUtil.warn(
+            "Array access complete expression=$expression project=$project"
+        )
         val prefix = "#${getKey()}"
         if (!expression.startsWith(prefix)) return null
 
@@ -49,8 +73,10 @@ class PropertiesArrayAccessTypeProvider : PhpTypeProvider4 {
         if (fieldType.types.isEmpty()) return null
 
         DebugUtil.warn(
-            "Array access complete expression=$expression receiverRaw=${payload.receiverRawType} " +
-                "resolvedReceiverType=$resolvedReceiverType targetFqn=$targetFqn key=${payload.key} fieldType=$fieldType"
+            "Array access complete expression=$expression " +
+                "receiverRaw=${payload.receiverRawType} " +
+                "resolvedReceiverType=$resolvedReceiverType " +
+                "targetFqn=$targetFqn key=${payload.key} fieldType=$fieldType"
         )
 
         return fieldType
