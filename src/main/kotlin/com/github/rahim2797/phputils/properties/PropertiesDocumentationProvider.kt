@@ -25,13 +25,6 @@ class PropertiesDocumentationProvider : AbstractDocumentationProvider() {
         )
     }
 
-    override fun getQuickNavigateInfo(element: PsiElement, originalElement: PsiElement?): String? {
-        val target = resolveDocTarget(element, originalElement) ?: return null
-        val shape = PropertiesShapeFormatter.formatShape(element.project, target.targetFqn) ?: return null
-        val variablePrefix = target.variableName?.let { "\$$it: " } ?: ""
-        return variablePrefix + shape
-    }
-
     override fun getCustomDocumentationElement(
         editor: Editor,
         file: PsiFile,

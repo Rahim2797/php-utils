@@ -5,32 +5,6 @@ import com.intellij.openapi.project.Project
 import com.jetbrains.php.PhpIndex
 
 object PropertiesShapeFormatter {
-    fun formatShape(project: Project, targetFqn: String): String? {
-        val phpIndex = PhpIndex.getInstance(project)
-        val phpClass = phpIndex.getClassesByFQN(targetFqn).firstOrNull() ?: return null
-
-        val entries = phpClass.fields
-            .asSequence()
-            .filter { it.name.isNotBlank() }
-            .map { field ->
-                val renderedType = renderFieldType(field.type.toString())
-                "${field.name}: $renderedType"
-            }
-            .distinct()
-            .sorted()
-            .toList()
-
-        if (entries.isEmpty()) {
-            return "array{}"
-        }
-
-        return buildString {
-            append("array{")
-            append(entries.joinToString(", "))
-            append("}")
-        }
-    }
-
     fun formatPopupHtml(project: Project, targetFqn: String, variableName: String? = null): String? {
         val phpIndex = PhpIndex.getInstance(project)
         val phpClass = phpIndex.getClassesByFQN(targetFqn).firstOrNull() ?: return null
