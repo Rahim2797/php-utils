@@ -4,9 +4,6 @@ import com.intellij.codeInspection.InspectionSuppressor
 import com.intellij.codeInspection.SuppressQuickFix
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
-import com.jetbrains.php.lang.documentation.phpdoc.psi.PhpDocComment
-import com.jetbrains.php.lang.documentation.phpdoc.psi.tags.PhpDocReturnTag
-import com.jetbrains.php.lang.documentation.phpdoc.psi.tags.PhpDocTag
 import com.jetbrains.php.lang.psi.PhpFile
 import com.jetbrains.php.lang.psi.elements.Function
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
@@ -49,27 +46,10 @@ class PropertiesInspectionSuppressor : InspectionSuppressor {
             return false
         }
 
-        val doc = function.docComment ?: previousPhpDoc(function) ?: return false
-        val returnTag = findReturnTag(doc) ?: return false
+        val doc = function.docComment ?: PropertiesPhpDocUtils.previousPhpDoc(function) ?: return false
+        val returnTag = PropertiesPhpDocUtils.findReturnTag(doc) ?: return false
 
         return PropertiesTypeInspector.containsPropertiesType(returnTag.declaredType)
-    }
-
-    private fun findReturnTag(doc: PhpDocComment): PhpDocReturnTag? {
-        return PsiTreeUtil.findChildrenOfType(doc, PhpDocTag::class.java)
-            .firstOrNull { it as? PhpDocReturnTag !== null } as PhpDocReturnTag?
-    }
-
-    private fun previousPhpDoc(function: Function): PhpDocComment? {
-        var current: PsiElement? = function.prevSibling
-        while (current != null) {
-            when {
-                current is PhpDocComment -> return current
-                current.text.isBlank() -> current = current.prevSibling
-                else -> return null
-            }
-        }
-        return null
     }
 
     private fun isReturnMismatchInspection(toolId: String): Boolean {
