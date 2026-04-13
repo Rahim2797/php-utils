@@ -73,9 +73,17 @@ object PropertiesTargetResolver {
             val function = resolved as? Function ?: continue
             extractParamTargetFqn(function, argIndex)?.let { return it }
         }
-        return null
-    }
 
+        val functionName = call.name ?: return null
+        val scope = findLocalScope(call) ?: return null
+
+        return PsiTreeUtil.collectElementsOfType(scope, Function::class.java)
+            .asSequence()
+            .filter { it.name == functionName }
+            .sortedByDescending { it.textOffset }
+            .mapNotNull { extractParamTargetFqn(it, argIndex) }
+            .firstOrNull()
+    }
     private fun resolveMethodArgumentTarget(call: MethodReference, argIndex: Int): String? {
         for (resolved in call.multiResolve(false)) {
             val method = resolved.element as? Method ?: continue
