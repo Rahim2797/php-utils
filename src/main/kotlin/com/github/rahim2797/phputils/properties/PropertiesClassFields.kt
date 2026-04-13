@@ -13,7 +13,7 @@ object PropertiesClassFields {
 
     fun getFields(project: Project, targetFqn: String): List<Field> {
         val phpIndex = PhpIndex.getInstance(project)
-        val classes = phpIndex.getClassesByFQN(targetFqn)
+        val classes = findClassesByFqn(phpIndex, targetFqn)
         if (classes.isEmpty()) return emptyList()
 
         val helperAttributes = classes
@@ -44,6 +44,21 @@ object PropertiesClassFields {
 
     fun findField(project: Project, targetFqn: String, fieldName: String): Field? {
         return getFields(project, targetFqn).firstOrNull { it.name == fieldName }
+    }
+
+    private fun findClassesByFqn(phpIndex: PhpIndex, targetFqn: String): Collection<PhpClass> {
+        val candidates = linkedSetOf(targetFqn, targetFqn.removePrefix("\\"))
+
+        for (candidate in candidates) {
+            if (candidate.isBlank()) continue
+
+            val classes = phpIndex.getClassesByFQN(candidate)
+            if (classes.isNotEmpty()) {
+                return classes
+            }
+        }
+
+        return emptyList()
     }
 
     private fun getHelperModelProperties(phpClass: PhpClass): List<PhpDocProperty> {

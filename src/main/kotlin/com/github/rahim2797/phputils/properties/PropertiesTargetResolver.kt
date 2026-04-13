@@ -8,11 +8,16 @@ import com.jetbrains.php.lang.documentation.phpdoc.psi.tags.PhpDocReturnTag
 import com.jetbrains.php.lang.documentation.phpdoc.psi.tags.PhpDocTag
 import com.jetbrains.php.lang.psi.elements.*
 import com.jetbrains.php.lang.psi.elements.Function
+import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 object PropertiesTargetResolver {
 
     fun resolveTargetFqnLocally(receiver: PhpExpression): String? {
-        return resolveTargetFqnLocally(receiver, mutableSetOf())
+        return resolveTargetFqnLocally(receiver, mutableSetOf(), allowIndexAccess = true)
+    }
+
+    fun resolveTargetFqnLocallyWithoutIndexes(receiver: PhpExpression): String? {
+        return resolveTargetFqnLocally(receiver, mutableSetOf(), allowIndexAccess = false)
     }
 
     fun resolveTargetFqnForArrayLiteral(arrayCreation: ArrayCreationExpression): String? {
@@ -46,9 +51,7 @@ object PropertiesTargetResolver {
 
         extractReturnTargetFqn(function)?.let { return it }
 
-        val returnType = function.type
-        PropertiesTypeInspector.extractTargetFqn(returnType)?.let { return it }
-        PropertiesTypeInspector.extractTargetFqn(returnType.global(function.project))?.let { return it }
+        extractTargetFqnFromType(function.type, function.project, allowIndexAccess = true)?.let { return it }
 
         return null
     }
@@ -71,7 +74,7 @@ object PropertiesTargetResolver {
     private fun resolveCallArgumentTarget(call: FunctionReference, argIndex: Int): String? {
         for (resolved in call.resolveLocal()) {
             val function = resolved as? Function ?: continue
-            extractParamTargetFqn(function, argIndex)?.let { return it }
+            extractParamTargetFqn(function, argIndex, allowIndexAccess = true)?.let { return it }
         }
 
         val functionName = call.name ?: return null
@@ -81,13 +84,13 @@ object PropertiesTargetResolver {
             .asSequence()
             .filter { it.name == functionName }
             .sortedByDescending { it.textOffset }
-            .mapNotNull { extractParamTargetFqn(it, argIndex) }
+            .mapNotNull { extractParamTargetFqn(it, argIndex, allowIndexAccess = true) }
             .firstOrNull()
     }
     private fun resolveMethodArgumentTarget(call: MethodReference, argIndex: Int): String? {
         for (resolved in call.multiResolve(false)) {
             val method = resolved.element as? Method ?: continue
-            extractParamTargetFqn(method, argIndex)?.let { return it }
+            extractParamTargetFqn(method, argIndex, allowIndexAccess = true)?.let { return it }
         }
         return null
     }
@@ -100,11 +103,14 @@ object PropertiesTargetResolver {
         return PropertiesTypeInspector.extractTargetFqn(returnTag.declaredType)
     }
 
-    private fun extractParamTargetFqn(function: Function, argIndex: Int): String? {
+    private fun extractParamTargetFqn(
+        function: Function,
+        argIndex: Int,
+        allowIndexAccess: Boolean
+    ): String? {
         val parameter = function.parameters.getOrNull(argIndex) ?: return null
 
-        PropertiesTypeInspector.extractTargetFqn(parameter.type)?.let { return it }
-        PropertiesTypeInspector.extractTargetFqn(parameter.type.global(function.project))?.let { return it }
+        extractTargetFqnFromType(parameter.type, function.project, allowIndexAccess)?.let { return it }
 
         val doc = function.docComment ?: PropertiesPhpDocUtils.previousPhpDoc(function) ?: return null
         val paramTags = PsiTreeUtil.findChildrenOfType(doc, PhpDocTag::class.java)
@@ -120,12 +126,13 @@ object PropertiesTargetResolver {
 
     private fun resolveTargetFqnLocally(
         expression: PhpExpression?,
-        visited: MutableSet<PsiElement>
+        visited: MutableSet<PsiElement>,
+        allowIndexAccess: Boolean
     ): String? {
         if (expression == null) return null
         if (!visited.add(expression)) return null
 
-        extractFromExpression(expression)?.let { return it }
+        extractFromExpression(expression, allowIndexAccess)?.let { return it }
 
         if (expression is Variable) {
             extractFromVariableDoc(expression)?.let { return it }
@@ -134,22 +141,33 @@ object PropertiesTargetResolver {
                 extractFromAssignmentDoc(assignment, expression)?.let { return it }
 
                 val assignedValue = assignment.value as PhpExpression?
-                extractFromExpression(assignedValue)?.let { return it }
+                extractFromExpression(assignedValue, allowIndexAccess)?.let { return it }
 
-                resolveTargetFqnLocally(assignedValue, visited)?.let { return it }
+                resolveTargetFqnLocally(assignedValue, visited, allowIndexAccess)?.let { return it }
             }
         }
 
         return null
     }
 
-    private fun extractFromExpression(expression: PhpExpression?): String? {
+    private fun extractFromExpression(expression: PhpExpression?, allowIndexAccess: Boolean): String? {
         if (expression == null) return null
 
-        PropertiesTypeInspector.extractTargetFqn(expression.type)?.let { return it }
-        PropertiesTypeInspector.extractTargetFqn(expression.type.global(expression.project))?.let { return it }
+        extractTargetFqnFromType(expression.type, expression.project, allowIndexAccess)?.let { return it }
 
         return null
+    }
+
+    private fun extractTargetFqnFromType(
+        type: PhpType,
+        project: com.intellij.openapi.project.Project,
+        allowIndexAccess: Boolean
+    ): String? {
+        PropertiesTypeInspector.extractTargetFqn(type)?.let { return it }
+        if (!allowIndexAccess) return null
+
+        val globalType = PropertiesDumbModeGuards.globalTypeOrNull(type, project) ?: return null
+        return PropertiesTypeInspector.extractTargetFqn(globalType)
     }
 
     private fun extractFromVariableDoc(variable: Variable): String? {

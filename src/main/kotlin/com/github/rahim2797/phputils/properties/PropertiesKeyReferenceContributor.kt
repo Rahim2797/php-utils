@@ -28,9 +28,17 @@ class PropertiesKeyReferenceContributor : PsiReferenceContributor() {
                 private fun resolveArrayAccessTarget(literal: StringLiteralExpression): String? {
                     val receiver = PsiGuards.getArrayAccessReceiver(literal) ?: return null
 
-                    PropertiesTargetResolver.resolveTargetFqnLocally(receiver)?.let { return it }
+                    val localTarget =
+                        if (PropertiesDumbModeGuards.isDumb(literal.project)) {
+                            PropertiesTargetResolver.resolveTargetFqnLocallyWithoutIndexes(receiver)
+                        } else {
+                            PropertiesTargetResolver.resolveTargetFqnLocally(receiver)
+                        }
+                    localTarget?.let { return it }
 
-                    val resolvedReceiverType = receiver.type.global(literal.project)
+                    val resolvedReceiverType =
+                        PropertiesDumbModeGuards.globalTypeOrNull(receiver.type, literal.project)
+                            ?: return null
                     return PropertiesTypeInspector.extractTargetFqn(resolvedReceiverType)
                 }
 

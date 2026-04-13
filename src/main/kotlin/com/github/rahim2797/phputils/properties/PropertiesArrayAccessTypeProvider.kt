@@ -21,10 +21,16 @@ class PropertiesArrayAccessTypeProvider : PhpTypeProvider4 {
         if (key.isBlank()) return null
 
         // 1) Best case: resolve locally and return the final type directly.
-        val localTargetFqn = PropertiesTargetResolver.resolveTargetFqnLocally(receiver)
+        val localTargetFqn =
+            if (PropertiesDumbModeGuards.isDumb(element.project)) {
+                PropertiesTargetResolver.resolveTargetFqnLocallyWithoutIndexes(receiver)
+            } else {
+                PropertiesTargetResolver.resolveTargetFqnLocally(receiver)
+            }
         if (localTargetFqn != null) {
-            val field = PropertiesFieldResolver.findField(element.project, localTargetFqn, key)
-            val fieldType = field?.type
+            val fieldType = PropertiesDumbModeGuards.runSmart(element.project) {
+                PropertiesFieldResolver.findField(element.project, localTargetFqn, key)?.type
+            }
             if (fieldType != null && fieldType.types.isNotEmpty()) {
                 return fieldType
             }
@@ -47,14 +53,20 @@ class PropertiesArrayAccessTypeProvider : PhpTypeProvider4 {
     }
 
     override fun complete(expression: String, project: Project): PhpType? {
+        if (PropertiesDumbModeGuards.isDumb(project)) return null
+
         val prefix = "#${getKey()}"
         if (!expression.startsWith(prefix)) return null
 
         val payloadText = expression.substring(prefix.length)
         val payload = PropertiesArrayAccessTypeCodec.decode(payloadText) ?: return null
 
-        val resolvedReceiverType = PhpType().add(payload.receiverRawType).global(project)
-        val targetFqn = PropertiesTypeInspector.extractTargetFqn(resolvedReceiverType) ?: return null
+        val targetFqn =
+            PropertiesTypeInspector.extractTargetFqn(payload.receiverRawType)
+                ?: PropertiesDumbModeGuards
+                    .globalTypeOrNull(PhpType().add(payload.receiverRawType), project)
+                    ?.let(PropertiesTypeInspector::extractTargetFqn)
+                ?: return null
 
         val field = PropertiesFieldResolver.findField(project, targetFqn, payload.key) ?: return null
         val fieldType = field.type
