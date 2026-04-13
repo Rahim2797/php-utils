@@ -10,7 +10,7 @@ object PropertiesShapeFormatter {
         val phpClass = phpIndex.getClassesByFQN(targetFqn).firstOrNull() ?: return null
         val shortClass = targetFqn.substringAfterLast('\\')
 
-        val fields = phpClass.fields
+        val fields = PropertiesClassFields.getFields(project, targetFqn)
             .asSequence()
             .filter { it.name.isNotBlank() }
             .distinctBy { it.name }

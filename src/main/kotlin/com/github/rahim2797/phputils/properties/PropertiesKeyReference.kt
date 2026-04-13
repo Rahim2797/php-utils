@@ -4,9 +4,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElementResolveResult
 import com.intellij.psi.PsiPolyVariantReferenceBase
 import com.intellij.psi.ResolveResult
-import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.Field
-import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 class PropertiesKeyReference(
@@ -19,19 +17,8 @@ class PropertiesKeyReference(
     true
 ) {
     override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
-        val project = element.project
-        val phpIndex = PhpIndex.getInstance(project)
-
-        val results = mutableListOf<ResolveResult>()
-
-        for (phpClass in phpIndex.getClassesByFQN(targetFqn)) {
-            val field = findMatchingField(phpClass, key)
-            if (field != null) {
-                results += PsiElementResolveResult(field)
-            }
-        }
-
-        return results.toTypedArray()
+        val field = PropertiesClassFields.findField(element.project, targetFqn, key) ?: return emptyArray()
+        return arrayOf(PsiElementResolveResult(field))
     }
 
     override fun resolve(): Field? {
@@ -41,13 +28,6 @@ class PropertiesKeyReference(
     override fun getVariants(): Array<Any> {
         return PropertiesLookupElements.buildForLiteral(element, targetFqn)
     }
-
-    private fun findMatchingField(phpClass: PhpClass, fieldName: String): Field? {
-        phpClass.findFieldByName(fieldName, false)?.let { return it }
-
-        return phpClass.fields.firstOrNull { it.name == fieldName }
-    }
-
     companion object {
         private fun keyRangeInLiteral(literal: StringLiteralExpression): TextRange {
             val text = literal.text

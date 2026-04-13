@@ -5,18 +5,14 @@ import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
-import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.Field
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 object PropertiesLookupElements {
 
     fun buildForLiteral(literal: StringLiteralExpression, targetFqn: String): Array<Any> {
-        val phpIndex = PhpIndex.getInstance(literal.project)
-
-        return phpIndex.getClassesByFQN(targetFqn)
+        return PropertiesClassFields.getFields(literal.project, targetFqn)
             .asSequence()
-            .flatMap { it.fields.asSequence() }
             .filter { it.name.isNotBlank() }
             .distinctBy { it.name }
             .sortedBy { it.name }
