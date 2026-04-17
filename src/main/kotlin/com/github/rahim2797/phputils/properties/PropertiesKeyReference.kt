@@ -17,7 +17,7 @@ class PropertiesKeyReference(
     true
 ) {
     override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
-        val field = PropertiesClassFields.findField(element.project, targetFqn, key) ?: return emptyArray()
+        val field = PropertiesFieldCatalog.findField(element.project, targetFqn, key) ?: return emptyArray()
         return arrayOf(PsiElementResolveResult(field))
     }
 

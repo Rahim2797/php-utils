@@ -10,7 +10,7 @@ object PropertiesShapeFormatter {
         val phpClass = phpIndex.getClassesByFQN(targetFqn).firstOrNull() ?: return null
         val shortClass = targetFqn.substringAfterLast('\\')
 
-        val fields = PropertiesClassFields.getFields(project, targetFqn)
+        val fields = PropertiesFieldCatalog.getFields(project, targetFqn)
             .asSequence()
             .filter { it.name.isNotBlank() }
             .distinctBy { it.name }
@@ -33,7 +33,7 @@ object PropertiesShapeFormatter {
                     append("  ")
                     append(link("field:$targetFqn#${field.name}", field.name))
                     append(": ")
-                    append(escape(renderFieldType(field.type.toString())))
+                    append(escape(PropertiesFieldCatalog.renderFieldType(field.type.toString())))
 
                     if (index < fields.lastIndex) {
                         append(",")
@@ -62,12 +62,6 @@ object PropertiesShapeFormatter {
             DocumentationManagerUtil.createHyperlink(this, ref, escape(label), false)
         }
     }
-
-    private fun renderFieldType(raw: String): String {
-        if (raw.isBlank()) return "mixed"
-        return raw.removePrefix("\\")
-    }
-
     private fun escape(s: String): String {
         return s
             .replace("&", "&amp;")

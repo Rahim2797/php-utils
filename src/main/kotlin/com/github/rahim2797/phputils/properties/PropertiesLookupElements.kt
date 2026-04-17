@@ -11,7 +11,7 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 object PropertiesLookupElements {
 
     fun buildForLiteral(literal: StringLiteralExpression, targetFqn: String): Array<Any> {
-        return PropertiesClassFields.getFields(literal.project, targetFqn)
+        return PropertiesFieldCatalog.getFields(literal.project, targetFqn)
             .asSequence()
             .filter { it.name.isNotBlank() }
             .distinctBy { it.name }
@@ -19,17 +19,12 @@ object PropertiesLookupElements {
             .map { field ->
                 LookupElementBuilder.create(field.name)
                     .withPresentableText(field.name)
-                    .withTypeText(renderFieldType(field), true)
+                    .withTypeText(PropertiesFieldCatalog.renderFieldType(field), true)
                     .withIcon(field.getIcon(0))
                     .withInsertHandler(PropertiesArrayKeyInsertHandler(literal))
             }
             .toList()
             .toTypedArray()
-    }
-
-    private fun renderFieldType(field: Field): String {
-        val raw = field.type.toString().removePrefix("\\")
-        return if (raw.isBlank()) "mixed" else raw
     }
 }
 

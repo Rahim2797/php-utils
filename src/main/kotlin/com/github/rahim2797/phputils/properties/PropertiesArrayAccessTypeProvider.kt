@@ -21,12 +21,7 @@ class PropertiesArrayAccessTypeProvider : PhpTypeProvider4 {
         if (key.isBlank()) return null
 
         // 1) Best case: resolve locally and return the final type directly.
-        val localTargetFqn =
-            if (PropertiesDumbModeGuards.isDumb(element.project)) {
-                PropertiesTargetResolver.resolveTargetFqnLocallyWithoutIndexes(receiver)
-            } else {
-                PropertiesTargetResolver.resolveTargetFqnLocally(receiver)
-            }
+        val localTargetFqn = PropertiesContextResolver.resolveArrayAccessTargetFqn(receiver)
         if (localTargetFqn != null) {
             val fieldType = PropertiesDumbModeGuards.runSmart(element.project) {
                 PropertiesFieldResolver.findField(element.project, localTargetFqn, key)?.type

@@ -16,35 +16,10 @@ class PropertiesKeyReferenceContributor : PsiReferenceContributor() {
                 ): Array<PsiReference> {
                     val literal = element as StringLiteralExpression
                     val key = literal.contents
-
-                    val targetFqn =
-                        resolveArrayAccessTarget(literal)
-                            ?: resolveArrayLiteralTarget(literal)
+                    val targetFqn = PropertiesContextResolver.resolveLiteralTargetFqn(literal)
                         ?: return PsiReference.EMPTY_ARRAY
 
                     return arrayOf(PropertiesKeyReference(literal, key, targetFqn))
-                    }
-
-                private fun resolveArrayAccessTarget(literal: StringLiteralExpression): String? {
-                    val receiver = PsiGuards.getArrayAccessReceiver(literal) ?: return null
-
-                    val localTarget =
-                        if (PropertiesDumbModeGuards.isDumb(literal.project)) {
-                            PropertiesTargetResolver.resolveTargetFqnLocallyWithoutIndexes(receiver)
-                        } else {
-                            PropertiesTargetResolver.resolveTargetFqnLocally(receiver)
-                        }
-                    localTarget?.let { return it }
-
-                    val resolvedReceiverType =
-                        PropertiesDumbModeGuards.globalTypeOrNull(receiver.type, literal.project)
-                            ?: return null
-                    return PropertiesTypeInspector.extractTargetFqn(resolvedReceiverType)
-                }
-
-                private fun resolveArrayLiteralTarget(literal: StringLiteralExpression): String? {
-                    val arrayCreation = PsiGuards.getOwningArrayCreation(literal) ?: return null
-                    return PropertiesTargetResolver.resolveTargetFqnForArrayLiteral(arrayCreation)
                 }
             }
         )

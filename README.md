@@ -1,6 +1,6 @@
 # PHP Utilities
 
-PhpStorm plugin adding smart support for custom `Properties<T>` PHPDoc types.
+PhpStorm companion plugin for practical PHP and Laravel development helpers, starting with smart support for custom `Properties<T>` PHPDoc types.
 
 ![Build](https://github.com/Rahim2797/php-utils/workflows/Build/badge.svg)
 [![Version](https://img.shields.io/jetbrains/plugin/v/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
@@ -10,15 +10,22 @@ PhpStorm plugin adding smart support for custom `Properties<T>` PHPDoc types.
 
 <!-- Plugin description -->
 
-Adds smart PhpStorm support for custom `Properties<T>` PHPDoc types.
+Adds conservative PhpStorm/Laravel workflow enhancements, with `Properties<T>` as the first implemented magic type.
 
-This plugin treats `Properties<T>` as an array-like structure whose valid keys are the properties of class `T`.
+`Properties<T>` is treated as an array-like structure whose valid keys are the properties of class `T`.
 
 Features:
 - Autocomplete for array keys like `$props['username']`
 - Go to declaration from an array key to the corresponding class property
 - Type inference for accessed values, based on the target property type
+- Documentation rendering for `Properties<T>` PHPDoc usages
+- Contradiction diagnostics when `@return Properties<T>` conflicts with a non-array native return type
 - Support for `Properties<T>` in common local contexts such as variable annotations, returns, parameters, and array literals
+
+Planned direction:
+- Additional magic types inspired by utility types such as `Pick` and `Omit`
+- Typed data-bag helpers for object-like shaped payloads
+- Smart refactor helpers for array/object shape transformations
 
 Example:
 
@@ -30,7 +37,7 @@ $username = $props['username'];
 $isActive = $props['is_activated']; 
 ```
 
-With Properties<User>, the plugin resolves valid keys from User fields and makes array access behave like a typed property map.
+With `Properties<User>`, the plugin resolves valid keys from `User` fields and makes array access behave like a typed property map.
 
 This is especially useful for codebases that model validated or projected object data as associative arrays while still wanting strong editor assistance.
 
