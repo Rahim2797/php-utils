@@ -228,7 +228,8 @@ object PropertiesTargetResolver {
                 expression.type,
                 expression.project,
                 allowIndexAccess,
-                contextClassOf(expression)
+                contextClassOf(expression),
+                expression
             )
         }
     }
@@ -240,31 +241,32 @@ object PropertiesTargetResolver {
         contextClass: PhpClass?
     ): Set<String> {
         val targets = linkedSetOf<String>()
-        targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(element.type), contextClass)
-        targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(element.declaredType), contextClass)
-        targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(element.docType), contextClass)
+        targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(element.type, element), contextClass)
+        targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(element.declaredType, element), contextClass)
+        targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(element.docType, element), contextClass)
 
         if (targets.isNotEmpty() || !allowIndexAccess) {
             return targets
         }
 
         val globalType = PropertiesDumbModeGuards.globalTypeOrNull(element.type, project) ?: return emptySet()
-        return normalizeTargets(PropertiesTypeInspector.extractTargetFqns(globalType), contextClass)
+        return normalizeTargets(PropertiesTypeInspector.extractTargetFqns(globalType, element), contextClass)
     }
 
     private fun extractTargetFqnsFromType(
         type: PhpType,
         project: com.intellij.openapi.project.Project,
         allowIndexAccess: Boolean,
-        contextClass: PhpClass?
+        contextClass: PhpClass?,
+        contextElement: PsiElement?
     ): Set<String> {
-        val targets = normalizeTargets(PropertiesTypeInspector.extractTargetFqns(type), contextClass)
+        val targets = normalizeTargets(PropertiesTypeInspector.extractTargetFqns(type, contextElement), contextClass)
         if (targets.isNotEmpty() || !allowIndexAccess) {
             return targets
         }
 
         val globalType = PropertiesDumbModeGuards.globalTypeOrNull(type, project) ?: return emptySet()
-        return normalizeTargets(PropertiesTypeInspector.extractTargetFqns(globalType), contextClass)
+        return normalizeTargets(PropertiesTypeInspector.extractTargetFqns(globalType, contextElement), contextClass)
     }
 
     private fun extractTargetsFromReturnDocs(function: Function, contextClass: PhpClass?): Set<String> {
@@ -275,8 +277,8 @@ object PropertiesTargetResolver {
             for (doc in directDocs(candidate)) {
                 val returnTag = PropertiesPhpDocUtils.findReturnTag(doc)
                 if (returnTag != null) {
-                    targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(returnTag.declaredType), candidateContextClass)
-                    targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(returnTag.type), candidateContextClass)
+                    targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(returnTag.declaredType, returnTag), candidateContextClass)
+                    targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(returnTag.type, returnTag), candidateContextClass)
                 }
             }
         }
@@ -302,8 +304,8 @@ object PropertiesTargetResolver {
 
                 for (tag in paramTags) {
                     if (!tag.text.contains("\$$parameterName")) continue
-                    targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(tag.declaredType), candidateContextClass)
-                    targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(tag.type), candidateContextClass)
+                    targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(tag.declaredType, tag), candidateContextClass)
+                    targets += normalizeTargets(PropertiesTypeInspector.extractTargetFqns(tag.type, tag), candidateContextClass)
                 }
             }
         }
@@ -337,7 +339,7 @@ object PropertiesTargetResolver {
                 .filter { it.text.contains("\$$variableName") || !it.text.contains("$") }
                 .flatMap { tag ->
                     sequenceOf(tag.type, tag.declaredType).flatMap { type ->
-                        normalizeTargets(PropertiesTypeInspector.extractTargetFqns(type), contextClass).asSequence()
+                        normalizeTargets(PropertiesTypeInspector.extractTargetFqns(type, tag), contextClass).asSequence()
                     }
                 }
                 .toCollection(linkedSetOf())
@@ -359,7 +361,7 @@ object PropertiesTargetResolver {
 
         val exactVarPattern = Regex("""@var\s+([^\s*]+)\s+$normalizedVar\b""")
         val exactTargets = exactVarPattern.find(docText)?.groupValues?.getOrNull(1)
-            ?.let { normalizeTargets(PropertiesTypeInspector.extractTargetFqns(it), contextClass) }
+            ?.let { normalizeTargets(PropertiesTypeInspector.extractTargetFqns(it, contextClass), contextClass) }
             .orEmpty()
         if (exactTargets.isNotEmpty()) {
             return exactTargets
@@ -367,7 +369,7 @@ object PropertiesTargetResolver {
 
         val loosePattern = Regex("""@var\s+([^\s*]+)""")
         return loosePattern.find(docText)?.groupValues?.getOrNull(1)
-            ?.let { normalizeTargets(PropertiesTypeInspector.extractTargetFqns(it), contextClass) }
+            ?.let { normalizeTargets(PropertiesTypeInspector.extractTargetFqns(it, contextClass), contextClass) }
             .orEmpty()
     }
 

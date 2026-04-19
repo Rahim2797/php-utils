@@ -17,18 +17,18 @@ class PropertiesTypeContradictionInspection : LocalInspectionTool() {
                     function.docComment ?: PropertiesPhpDocUtils.previousPhpDoc(function) ?: return
                 ) ?: return
                 val docType = returnTag.declaredType
-                if (!PropertiesTypeInspector.containsPropertiesType(docType)) return
+                if (!PropertiesTypeInspector.containsPropertiesType(docType, function)) return
 
                 val declaredReturnType = function.declaredType
                 if (PropertiesTypeCompatibility.isArrayCompatible(declaredReturnType)) return
 
-                val targetFqn = PropertiesTypeInspector.extractTargetFqn(docType)
+                val targetFqn = PropertiesTypeInspector.extractTargetFqn(docType, function)
                 val declaredTypeText = PropertiesTypeCompatibility.describe(declaredReturnType)
                 val highlightedElement =
                     PsiTreeUtil.findChildOfType(returnTag, PhpDocType::class.java) ?: returnTag
                 holder.registerProblem(
                     highlightedElement,
-                    "Properties<$targetFqn> is array-like, but declared return type `$declaredTypeText` is not array-compatible."
+                    "${PropertiesMagicTypeNames.render(targetFqn ?: "mixed", function)} is array-like, but declared return type `$declaredTypeText` is not array-compatible."
                 )
             }
         }

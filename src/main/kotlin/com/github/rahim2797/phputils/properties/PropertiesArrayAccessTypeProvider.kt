@@ -60,7 +60,7 @@ class PropertiesArrayAccessTypeProvider : PhpTypeProvider4 {
         targetFqns += PropertiesTypeInspector.extractTargetFqns(payload.receiverRawType)
         targetFqns += PropertiesDumbModeGuards
             .globalTypeOrNull(PhpType().add(payload.receiverRawType), project)
-            ?.let(PropertiesTypeInspector::extractTargetFqns)
+            ?.let { PropertiesTypeInspector.extractTargetFqns(it) }
             .orEmpty()
         if (targetFqns.isEmpty()) return null
 

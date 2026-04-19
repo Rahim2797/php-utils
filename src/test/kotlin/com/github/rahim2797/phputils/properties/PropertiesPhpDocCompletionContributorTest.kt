@@ -42,7 +42,7 @@ class PropertiesPhpDocCompletionContributorTest : BasePlatformTestCase() {
         items.first().renderElement(firstPresentation)
 
         assertEquals("Properties", firstPresentation.itemText)
-        assertEquals("magic type", firstPresentation.typeText)
+        assertEquals(PropertiesMagicTypeNames.QUALIFIED_NAME, firstPresentation.typeText)
 
         val propertiesEntries = items
             .map {
@@ -51,18 +51,10 @@ class PropertiesPhpDocCompletionContributorTest : BasePlatformTestCase() {
             .filter { it.itemText == "Properties" }
 
         assertTrue(propertiesEntries.size >= 2)
-        assertTrue(propertiesEntries.any { it.typeText != "magic type" })
+        assertTrue(propertiesEntries.any { it.typeText != PropertiesMagicTypeNames.QUALIFIED_NAME })
     }
 
-    fun testMagicPropertiesInsertionAddsGenericPlaceholders() {
-        myFixture.addFileToProject(
-            "PropertiesBag.php",
-            """
-            <?php
-            class PropertiesBag {}
-            """.trimIndent()
-        )
-
+    fun testMagicPropertiesInsertionAddsCanonicalFqnWithoutImport() {
         myFixture.configureByText(
             "insertGenerics.php",
             """
@@ -80,24 +72,18 @@ class PropertiesPhpDocCompletionContributorTest : BasePlatformTestCase() {
         myFixture.checkResult(
             """
             <?php
-            /** @var Properties<<caret>> ${'$'}props */
+            /** @var \Rahim2797\MagicTypes\Properties<<caret>> ${'$'}props */
             """.trimIndent()
         )
     }
 
-    fun testMagicPropertiesInsertionReusesExistingAngleBrackets() {
-        myFixture.addFileToProject(
-            "PropertiesBag.php",
-            """
-            <?php
-            class PropertiesBag {}
-            """.trimIndent()
-        )
-
+    fun testMagicPropertiesInsertionUsesImportedShortName() {
         myFixture.configureByText(
             "reuseGenerics.php",
             """
             <?php
+            use Rahim2797\MagicTypes\Properties;
+
             /** @var Pro<caret><> ${'$'}props */
             """.trimIndent()
         )
@@ -111,7 +97,36 @@ class PropertiesPhpDocCompletionContributorTest : BasePlatformTestCase() {
         myFixture.checkResult(
             """
             <?php
+            use Rahim2797\MagicTypes\Properties;
+
             /** @var Properties<<caret>> ${'$'}props */
+            """.trimIndent()
+        )
+    }
+
+    fun testMagicPropertiesInsertionUsesImportedAlias() {
+        myFixture.configureByText(
+            "aliasInsert.php",
+            """
+            <?php
+            use Rahim2797\MagicTypes\Properties as MTProps;
+
+            /** @var Pro<caret> ${'$'}props */
+            """.trimIndent()
+        )
+
+        val items = myFixture.completeBasic()
+        assertNotNull(items)
+        assertNotNull(myFixture.lookup)
+        myFixture.lookup.currentItem = items!!.first { it.isMagicPropertiesLookup() }
+        myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+
+        myFixture.checkResult(
+            """
+            <?php
+            use Rahim2797\MagicTypes\Properties as MTProps;
+
+            /** @var MTProps<<caret>> ${'$'}props */
             """.trimIndent()
         )
     }
@@ -119,6 +134,6 @@ class PropertiesPhpDocCompletionContributorTest : BasePlatformTestCase() {
     private fun com.intellij.codeInsight.lookup.LookupElement.isMagicPropertiesLookup(): Boolean {
         val presentation = LookupElementPresentation()
         renderElement(presentation)
-        return presentation.itemText == "Properties" && presentation.typeText == "magic type"
+        return presentation.itemText == "Properties" && presentation.typeText == PropertiesMagicTypeNames.QUALIFIED_NAME
     }
 }

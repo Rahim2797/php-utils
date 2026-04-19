@@ -26,7 +26,7 @@ class PropertiesCrossFileSupportTest : BasePlatformTestCase() {
             """
             <?php
             /**
-             * @return Properties<\User>
+             * @return \Rahim2797\MagicTypes\Properties<\User>
              */
             function getUserProperties(): array
             {
@@ -71,7 +71,7 @@ class PropertiesCrossFileSupportTest : BasePlatformTestCase() {
             """
             <?php
             class Holder {
-                /** @var Properties<\User> */
+                /** @var \Rahim2797\MagicTypes\Properties<\User> */
                 public array ${'$'}props = [];
             }
             """.trimIndent()
@@ -108,7 +108,7 @@ class PropertiesCrossFileSupportTest : BasePlatformTestCase() {
             <?php
             interface ProvidesProperties {
                 /**
-                 * @return Properties<\User>
+                 * @return \Rahim2797\MagicTypes\Properties<\User>
                  */
                 public function getProps(): array;
             }
@@ -159,7 +159,7 @@ class PropertiesCrossFileSupportTest : BasePlatformTestCase() {
             """
             <?php
             /**
-             * @param Properties<\User> ${'$'}props
+             * @param \Rahim2797\MagicTypes\Properties<\User> ${'$'}props
              */
             function takesProperties(array ${'$'}props): void {}
             """.trimIndent()
@@ -215,7 +215,7 @@ class PropertiesCrossFileSupportTest : BasePlatformTestCase() {
             """
             <?php
             /**
-             * @return Properties<\User>|Properties<\Admin>
+             * @return \Rahim2797\MagicTypes\Properties<\User>|\Rahim2797\MagicTypes\Properties<\Admin>
              */
             function getProperties(): array
             {

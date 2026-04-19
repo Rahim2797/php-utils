@@ -2,6 +2,8 @@
 
 namespace App\Contracts;
 
+use Rahim2797\MagicTypes\Properties;
+
 interface ProvidesProductProperties
 {
     /**

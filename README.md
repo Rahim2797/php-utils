@@ -1,6 +1,6 @@
 # PHP Utilities
 
-PhpStorm companion plugin for practical PHP and Laravel development helpers, starting with smart support for custom `Properties<T>` PHPDoc types.
+PhpStorm companion plugin for practical PHP and Laravel development helpers, starting with smart support for the custom `Rahim2797\MagicTypes\Properties<T>` PHPDoc type.
 
 ![Build](https://github.com/Rahim2797/php-utils/workflows/Build/badge.svg)
 [![Version](https://img.shields.io/jetbrains/plugin/v/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
@@ -10,17 +10,17 @@ PhpStorm companion plugin for practical PHP and Laravel development helpers, sta
 
 <!-- Plugin description -->
 
-Adds conservative PhpStorm/Laravel workflow enhancements, with `Properties<T>` as the first implemented magic type.
+Adds conservative PhpStorm/Laravel workflow enhancements, with `Rahim2797\MagicTypes\Properties<T>` as the first implemented magic type.
 
-`Properties<T>` is treated as an array-like structure whose valid keys are the properties of class `T`.
+`Rahim2797\MagicTypes\Properties<T>` is treated as an array-like structure whose valid keys are the properties of class `T`.
 
 Features:
 - Autocomplete for array keys like `$props['username']`
 - Go to declaration from an array key to the corresponding class property
 - Type inference for accessed values, based on the target property type
-- Documentation rendering for `Properties<T>` PHPDoc usages
-- Contradiction diagnostics when `@return Properties<T>` conflicts with a non-array native return type
-- Support for `Properties<T>` in common local contexts such as variable annotations, returns, parameters, and array literals
+- Documentation rendering for `Rahim2797\MagicTypes\Properties<T>` PHPDoc usages
+- Contradiction diagnostics when `@return Rahim2797\MagicTypes\Properties<T>` conflicts with a non-array native return type
+- Support for `Rahim2797\MagicTypes\Properties<T>` in common local contexts such as variable annotations, returns, parameters, and array literals
 
 Planned direction:
 - Additional magic types inspired by utility types such as `Pick` and `Omit`
@@ -30,12 +30,16 @@ Planned direction:
 Example:
 
 ```php
+use Rahim2797\MagicTypes\Properties;
+
 /** @var Properties<User> $props */
 $props = [];
 
 $username = $props['username'];
 $isActive = $props['is_activated']; 
 ```
+
+The plugin ships an IDE-only stub for `Rahim2797\MagicTypes\Properties`, so runtime PHP is unaffected as long as you keep the symbol in PHPDoc only.
 
 With `Properties<User>`, the plugin resolves valid keys from `User` fields and makes array access behave like a typed property map.
 

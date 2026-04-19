@@ -3,21 +3,21 @@ package com.github.rahim2797.phputils.properties
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 object PropertiesTypeInspector {
-    fun extractTargetFqns(type: PhpType): Set<String> {
+    fun extractTargetFqns(type: PhpType, context: com.intellij.psi.PsiElement? = null): Set<String> {
         val targets = linkedSetOf<String>()
 
         for (raw in type.typesWithParametrisedParts) {
-            targets += extractTargetFqns(raw)
+            targets += extractTargetFqns(raw, context)
         }
 
         return targets
     }
 
-    fun extractTargetFqn(type: PhpType): String? {
-        return extractTargetFqns(type).firstOrNull()
+    fun extractTargetFqn(type: PhpType, context: com.intellij.psi.PsiElement? = null): String? {
+        return extractTargetFqns(type, context).firstOrNull()
     }
 
-    fun extractTargetFqns(raw: String): Set<String> {
+    fun extractTargetFqns(raw: String, context: com.intellij.psi.PsiElement? = null): Set<String> {
         val normalized = stripOuterWrappers(stripPluralSuffix(raw.trim()))
         if (normalized.isBlank()) return emptySet()
 
@@ -25,35 +25,35 @@ object PropertiesTypeInspector {
         if (topLevelParts.size > 1) {
             return topLevelParts
                 .asSequence()
-                .flatMap { extractTargetFqns(it).asSequence() }
+                .flatMap { extractTargetFqns(it, context).asSequence() }
                 .toCollection(linkedSetOf())
         }
 
         val base = removeParametrisedType(normalized)
         val parameters = PhpType.getParametrizedParts(normalized)
 
-        if (isPropertiesBase(base)) {
+        if (isPropertiesBase(base, context)) {
             val firstParameter = parameters.firstOrNull() ?: return emptySet()
-            return extractClassLikeTargets(firstParameter)
+            return extractClassLikeTargets(firstParameter, context)
         }
 
         if (parameters.isEmpty()) return emptySet()
 
         return parameters
             .asSequence()
-            .flatMap { extractTargetFqns(it).asSequence() }
+            .flatMap { extractTargetFqns(it, context).asSequence() }
             .toCollection(linkedSetOf())
     }
 
-    fun extractTargetFqn(raw: String): String? {
-        return extractTargetFqns(raw).firstOrNull()
+    fun extractTargetFqn(raw: String, context: com.intellij.psi.PsiElement? = null): String? {
+        return extractTargetFqns(raw, context).firstOrNull()
     }
 
-    fun containsPropertiesType(type: PhpType): Boolean {
-        return extractTargetFqns(type).isNotEmpty()
+    fun containsPropertiesType(type: PhpType, context: com.intellij.psi.PsiElement? = null): Boolean {
+        return extractTargetFqns(type, context).isNotEmpty()
     }
 
-    private fun extractClassLikeTargets(raw: String): Set<String> {
+    private fun extractClassLikeTargets(raw: String, context: com.intellij.psi.PsiElement?): Set<String> {
         val normalized = stripOuterWrappers(stripPluralSuffix(raw.trim()))
         if (normalized.isBlank()) return emptySet()
 
@@ -61,26 +61,26 @@ object PropertiesTypeInspector {
         if (topLevelParts.size > 1) {
             return topLevelParts
                 .asSequence()
-                .flatMap { extractClassLikeTargets(it).asSequence() }
+                .flatMap { extractClassLikeTargets(it, context).asSequence() }
                 .toCollection(linkedSetOf())
         }
 
-        val base = normalizePotentialClassToken(removeParametrisedType(normalized)) ?: return emptySet()
+        val base = normalizePotentialClassToken(removeParametrisedType(normalized), context) ?: return emptySet()
         return linkedSetOf(base)
     }
 
-    private fun isPropertiesBase(base: String): Boolean {
-        val normalized = normalizeSignatureToken(base).substringAfterLast('\\')
-        return normalized == "Properties"
+    private fun isPropertiesBase(base: String, context: com.intellij.psi.PsiElement?): Boolean {
+        val normalized = normalizeSignatureToken(base)
+        return PropertiesMagicTypeNames.resolveMagicTypeReference(normalized, context) != null
     }
 
-    private fun normalizePotentialClassToken(raw: String): String? {
+    private fun normalizePotentialClassToken(raw: String, context: com.intellij.psi.PsiElement?): String? {
         val normalized = normalizeSignatureToken(raw)
         if (normalized.isBlank()) return null
 
         return when (normalized.lowercase()) {
             "self", "static", "parent" -> normalized.lowercase()
-            else -> normalized.takeIf { !PhpType.isPrimitiveType(it) && it != "\\mixed" }
+            else -> PropertiesMagicTypeNames.resolveClassLikeName(normalized, context)
         }
     }
 

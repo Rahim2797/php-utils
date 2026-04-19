@@ -23,7 +23,7 @@ class PropertiesKeyReferenceContributorTest : BasePlatformTestCase() {
             "resolve.php",
             """
             <?php
-            /** @var Properties<\User> ${'$'}props */
+            /** @var \Rahim2797\MagicTypes\Properties<\User> ${'$'}props */
             ${'$'}props = [];
             ${'$'}value = ${'$'}props['na<caret>me'];
             """.trimIndent()
@@ -57,7 +57,7 @@ class PropertiesKeyReferenceContributorTest : BasePlatformTestCase() {
             "variants.php",
             """
             <?php
-            /** @var Properties<\User> ${'$'}props */
+            /** @var \Rahim2797\MagicTypes\Properties<\User> ${'$'}props */
             ${'$'}props = [];
             ${'$'}value = ${'$'}props['<caret>'];
             """.trimIndent()
@@ -93,7 +93,7 @@ class PropertiesKeyReferenceContributorTest : BasePlatformTestCase() {
             """
             <?php
             /**
-             * @param Properties<\User> ${'$'}props
+             * @param \Rahim2797\MagicTypes\Properties<\User> ${'$'}props
              */
             function takesProps(array ${'$'}props): void {}
 
@@ -108,5 +108,89 @@ class PropertiesKeyReferenceContributorTest : BasePlatformTestCase() {
         val reference = literal.references.singleOrNull() as? PropertiesKeyReference
         assertNotNull(reference)
         assertEquals("email", reference!!.resolve()?.name)
+    }
+
+    fun testImportedCanonicalPropertiesTypeResolvesAsMagicType() {
+        myFixture.addFileToProject(
+            "User.php",
+            """
+            <?php
+            class User {
+                /** @var string */
+                public ${'$'}email;
+            }
+            """.trimIndent()
+        )
+
+        myFixture.configureByText(
+            "imported.php",
+            """
+            <?php
+            use Rahim2797\MagicTypes\Properties;
+
+            /** @var Properties<\User> ${'$'}props */
+            ${'$'}props = [];
+            ${'$'}value = ${'$'}props['ema<caret>il'];
+            """.trimIndent()
+        )
+
+        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? PropertiesKeyReference
+        assertNotNull(reference)
+        assertEquals("email", reference!!.resolve()?.name)
+    }
+
+    fun testAliasedCanonicalPropertiesTypeResolvesAsMagicType() {
+        myFixture.addFileToProject(
+            "User.php",
+            """
+            <?php
+            class User {
+                /** @var string */
+                public ${'$'}email;
+            }
+            """.trimIndent()
+        )
+
+        myFixture.configureByText(
+            "aliased.php",
+            """
+            <?php
+            use Rahim2797\MagicTypes\Properties as MTProps;
+
+            /** @var MTProps<\User> ${'$'}props */
+            ${'$'}props = [];
+            ${'$'}value = ${'$'}props['ema<caret>il'];
+            """.trimIndent()
+        )
+
+        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? PropertiesKeyReference
+        assertNotNull(reference)
+        assertEquals("email", reference!!.resolve()?.name)
+    }
+
+    fun testBareLegacyPropertiesTypeDoesNotResolveAsMagicType() {
+        myFixture.addFileToProject(
+            "User.php",
+            """
+            <?php
+            class User {
+                /** @var string */
+                public ${'$'}email;
+            }
+            """.trimIndent()
+        )
+
+        myFixture.configureByText(
+            "legacy.php",
+            """
+            <?php
+            /** @var Properties<\User> ${'$'}props */
+            ${'$'}props = [];
+            ${'$'}value = ${'$'}props['ema<caret>il'];
+            """.trimIndent()
+        )
+
+        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? PropertiesKeyReference
+        assertNull(reference)
     }
 }

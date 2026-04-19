@@ -24,7 +24,7 @@ class PropertiesDocumentationProviderTest : BasePlatformTestCase() {
             "docs.php",
             """
             <?php
-            /** @var Properties<\User> ${'$'}props */
+            /** @var \Rahim2797\MagicTypes\Properties<\User> ${'$'}props */
             ${'$'}props = [];
             """.trimIndent()
         )
@@ -37,6 +37,6 @@ class PropertiesDocumentationProviderTest : BasePlatformTestCase() {
         assertTrue(html!!.contains("array{"))
         assertTrue(html.contains("email"))
         assertTrue(html.contains("is_active"))
-        assertTrue(html.contains("Properties&lt;User&gt;"))
+        assertTrue(html.contains("Rahim2797\\MagicTypes\\Properties&lt;User&gt;"))
     }
 }

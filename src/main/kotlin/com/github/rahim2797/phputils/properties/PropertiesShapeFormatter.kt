@@ -48,7 +48,7 @@ object PropertiesShapeFormatter {
 
             append("<div class='content'>")
             append("<p><b>Derived from</b> ")
-            append(link("class:$targetFqn", "Properties<$shortClass>"))
+            append(link("class:$targetFqn", "${PropertiesMagicTypeNames.preferredTypeReference(phpClass)}<$shortClass>"))
             append("</p>")
             append("<p><b>Source class</b> ")
             append(link("class:$targetFqn", targetFqn))

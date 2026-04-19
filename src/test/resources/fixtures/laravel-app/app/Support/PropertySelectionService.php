@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Rahim2797\MagicTypes\Properties;
+
 class PropertySelectionService
 {
     /**

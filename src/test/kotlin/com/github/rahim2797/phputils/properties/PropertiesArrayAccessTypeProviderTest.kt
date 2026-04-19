@@ -27,7 +27,7 @@ class PropertiesArrayAccessTypeProviderTest : BasePlatformTestCase() {
             """
             <?php
             /**
-             * @var \Properties<\User> ${'$'}properties
+             * @var \Rahim2797\MagicTypes\Properties<\User> ${'$'}properties
              */
             ${'$'}properties = null;
             ${'$'}value = ${'$'}properties['name'];
@@ -62,14 +62,14 @@ class PropertiesArrayAccessTypeProviderTest : BasePlatformTestCase() {
             """
             <?php
             /**
-             * @var \Properties<\User> ${'$'}properties
+             * @var \Rahim2797\MagicTypes\Properties<\User> ${'$'}properties
              */
             ${'$'}properties = null;
             ${'$'}value = ${'$'}properties['name'];
             """.trimIndent()
         )
 
-        val encoded = PropertiesArrayAccessTypeCodec.encode("#C\\Properties<\\User>", "name")
+        val encoded = PropertiesArrayAccessTypeCodec.encode("#C\\Rahim2797\\MagicTypes\\Properties<\\User>", "name")
         val payload = PropertiesArrayAccessTypeCodec.decode(encoded)
         assertNotNull(payload)
         assertEquals("\\User", PropertiesTypeInspector.extractTargetFqn(payload!!.receiverRawType))
@@ -93,7 +93,7 @@ class PropertiesArrayAccessTypeProviderTest : BasePlatformTestCase() {
             """
             <?php
             /**
-             * @param \Properties<\User> ${'$'}data
+             * @param \Rahim2797\MagicTypes\Properties<\User> ${'$'}data
              */
             function takesProperties(array ${'$'}data): void {}
             
@@ -126,7 +126,7 @@ class PropertiesArrayAccessTypeProviderTest : BasePlatformTestCase() {
             """
             <?php
             /**
-             * @var \Properties<\User> ${'$'}properties
+             * @var \Rahim2797\MagicTypes\Properties<\User> ${'$'}properties
              */
             ${'$'}properties = null;
             ${'$'}value = ${'$'}properties['name'];
@@ -158,7 +158,7 @@ class PropertiesArrayAccessTypeProviderTest : BasePlatformTestCase() {
             """
             <?php
             /**
-             * @var \Properties<\User> ${'$'}properties
+             * @var \Rahim2797\MagicTypes\Properties<\User> ${'$'}properties
              */
             ${'$'}properties = null;
             ${'$'}value = ${'$'}properties['na<caret>me'];

@@ -17,7 +17,7 @@ object PropertiesContextResolver {
 
         val resolvedReceiverType =
             PropertiesDumbModeGuards.globalTypeOrNull(receiver.type, receiver.project) ?: return emptySet()
-        return PropertiesTypeInspector.extractTargetFqns(resolvedReceiverType)
+        return PropertiesTypeInspector.extractTargetFqns(resolvedReceiverType, receiver)
     }
 
     fun resolveArrayAccessTargetFqn(receiver: PhpExpression): String? {
@@ -49,7 +49,10 @@ object PropertiesContextResolver {
 
             val phpDocType = current as? PhpDocType
             if (phpDocType != null) {
-                return PropertiesTypeInspector.extractTargetFqns(phpDocType.declaredType)
+                val directTargets = PropertiesTypeInspector.extractTargetFqns(phpDocType.text, phpDocType)
+                if (directTargets.isNotEmpty()) {
+                    return directTargets
+                }
             }
 
             current = current.parent

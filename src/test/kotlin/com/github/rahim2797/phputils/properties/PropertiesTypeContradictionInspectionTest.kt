@@ -25,7 +25,7 @@ class PropertiesTypeContradictionInspectionTest : BasePlatformTestCase() {
             """
             <?php
             /**
-             * @return <warning descr="Properties<\User> is array-like, but declared return type `string` is not array-compatible.">Properties<\User></warning>
+* @return <warning descr="\Rahim2797\MagicTypes\Properties<\User> is array-like, but declared return type `string` is not array-compatible.">\Rahim2797\MagicTypes\Properties<\User></warning>
              */
             function getProperties(): string
             {
@@ -54,7 +54,7 @@ class PropertiesTypeContradictionInspectionTest : BasePlatformTestCase() {
             """
             <?php
             /**
-             * @return Properties<\User>
+* @return \Rahim2797\MagicTypes\Properties<\User>
              */
             function getProperties(): array
             {
@@ -83,7 +83,7 @@ class PropertiesTypeContradictionInspectionTest : BasePlatformTestCase() {
             """
             <?php
             /**
-             * @return Properties<\User>
+* @return \Rahim2797\MagicTypes\Properties<\User>
              */
             function getProperties(): array|string
             {

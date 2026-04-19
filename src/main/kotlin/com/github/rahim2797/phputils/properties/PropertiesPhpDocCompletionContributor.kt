@@ -50,14 +50,14 @@ private class PropertiesPhpDocMagicTypeWeigher : LookupElementWeigher("propertie
 }
 
 private object PropertiesPhpDocMagicTypeLookup {
-    const val NAME = "Properties"
+    const val NAME = PropertiesMagicTypeNames.SHORT_NAME
     val marker = Any()
 
     fun build(): LookupElement {
         var builder = LookupElementBuilder.create(marker, NAME)
             .withPresentableText(NAME)
             .withTailText("<T>", true)
-            .withTypeText("magic type", true)
+            .withTypeText(PropertiesMagicTypeNames.QUALIFIED_NAME, true)
             .withInsertHandler(PropertiesPhpDocTypeInsertHandler)
 
         for (length in 1 until NAME.length) {
@@ -71,15 +71,26 @@ private object PropertiesPhpDocMagicTypeLookup {
 private object PropertiesPhpDocTypeInsertHandler : InsertHandler<LookupElement> {
     override fun handleInsert(context: InsertionContext, item: LookupElement) {
         val document = context.document
-        val tailOffset = context.tailOffset
-        val chars = document.charsSequence
+        val phpDocType = PsiTreeUtil.getParentOfType(context.file.findElementAt(context.startOffset), PhpDocType::class.java, false)
+        val preferredReference = PropertiesMagicTypeNames.preferredTypeReference(phpDocType ?: context.file)
+        val replacement = preferredReference
 
-        if (tailOffset < chars.length && chars[tailOffset] == '<') {
-            context.editor.caretModel.moveToOffset(tailOffset + 1)
+        val existingText = phpDocType?.text.orEmpty()
+        val hasOpeningAngle = existingText.indexOf('<').takeIf { it >= 0 }
+            ?.let { phpDocType!!.textRange.startOffset + it }
+
+        val endOffset = hasOpeningAngle ?: context.tailOffset
+        document.replaceString(context.startOffset, endOffset, replacement)
+
+        val insertTailOffset = context.startOffset + replacement.length
+        val chars = document.charsSequence
+        if (insertTailOffset < chars.length && chars[insertTailOffset] == '<') {
+            context.editor.caretModel.moveToOffset(insertTailOffset + 1)
             return
         }
 
-        document.insertString(tailOffset, "<>")
-        context.editor.caretModel.moveToOffset(tailOffset + 1)
+        document.insertString(insertTailOffset, "<>")
+        context.editor.caretModel.moveToOffset(insertTailOffset + 1)
+        context.tailOffset = insertTailOffset + 2
     }
 }

@@ -3,7 +3,9 @@ package com.github.rahim2797.phputils.properties
 import com.intellij.codeInspection.InspectionSuppressor
 import com.intellij.codeInspection.SuppressQuickFix
 import com.intellij.psi.PsiElement
+import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.PhpFile
+import com.jetbrains.php.lang.documentation.phpdoc.psi.PhpDocType
 
 class PropertiesInspectionSuppressor : InspectionSuppressor {
 
@@ -12,12 +14,11 @@ class PropertiesInspectionSuppressor : InspectionSuppressor {
             return false
         }
 
-        if (toolId == "PhpUndefinedClassInspection" && element.text == "Properties") {
-            return true
-        }
-
-        if (toolId == "PhpDocSignatureInspection" && element.text.contains("Properties<")) {
-            return true
+        if (toolId == "PhpDocSignatureInspection") {
+            val phpDocType = PsiTreeUtil.getParentOfType(element, PhpDocType::class.java, false)
+            if (phpDocType != null && PropertiesTypeInspector.extractTargetFqns(phpDocType.text, phpDocType).isNotEmpty()) {
+                return true
+            }
         }
 
         return false
