@@ -21,10 +21,10 @@ class PropertiesArrayAccessTypeProvider : PhpTypeProvider4 {
         if (key.isBlank()) return null
 
         // 1) Best case: resolve locally and return the final type directly.
-        val localTargetFqn = PropertiesContextResolver.resolveArrayAccessTargetFqn(receiver)
-        if (localTargetFqn != null) {
+        val localTargetFqns = PropertiesContextResolver.resolveArrayAccessTargetFqns(receiver)
+        if (localTargetFqns.isNotEmpty()) {
             val fieldType = PropertiesDumbModeGuards.runSmart(element.project) {
-                PropertiesFieldResolver.findField(element.project, localTargetFqn, key)?.type
+                PropertiesFieldCatalog.getFieldType(element.project, localTargetFqns, key)
             }
             if (fieldType != null && fieldType.types.isNotEmpty()) {
                 return fieldType
@@ -56,18 +56,15 @@ class PropertiesArrayAccessTypeProvider : PhpTypeProvider4 {
         val payloadText = expression.substring(prefix.length)
         val payload = PropertiesArrayAccessTypeCodec.decode(payloadText) ?: return null
 
-        val targetFqn =
-            PropertiesTypeInspector.extractTargetFqn(payload.receiverRawType)
-                ?: PropertiesDumbModeGuards
-                    .globalTypeOrNull(PhpType().add(payload.receiverRawType), project)
-                    ?.let(PropertiesTypeInspector::extractTargetFqn)
-                ?: return null
+        val targetFqns = linkedSetOf<String>()
+        targetFqns += PropertiesTypeInspector.extractTargetFqns(payload.receiverRawType)
+        targetFqns += PropertiesDumbModeGuards
+            .globalTypeOrNull(PhpType().add(payload.receiverRawType), project)
+            ?.let(PropertiesTypeInspector::extractTargetFqns)
+            .orEmpty()
+        if (targetFqns.isEmpty()) return null
 
-        val field = PropertiesFieldResolver.findField(project, targetFqn, payload.key) ?: return null
-        val fieldType = field.type
-        if (fieldType.types.isEmpty()) return null
-
-        return fieldType
+        return PropertiesFieldCatalog.getFieldType(project, targetFqns, payload.key)
     }
 
     override fun getBySignature(

@@ -6,45 +6,59 @@ import com.jetbrains.php.lang.psi.elements.PhpExpression
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 object PropertiesContextResolver {
-    fun resolveArrayAccessTargetFqn(receiver: PhpExpression): String? {
-        val project = receiver.project
-
-        val localTarget =
-            if (PropertiesDumbModeGuards.isDumb(project)) {
-                PropertiesTargetResolver.resolveTargetFqnLocallyWithoutIndexes(receiver)
+    fun resolveArrayAccessTargetFqns(receiver: PhpExpression): Set<String> {
+        val localTargets =
+            if (PropertiesDumbModeGuards.isDumb(receiver.project)) {
+                PropertiesTargetResolver.resolveTargetFqnsLocallyWithoutIndexes(receiver)
             } else {
-                PropertiesTargetResolver.resolveTargetFqnLocally(receiver)
+                PropertiesTargetResolver.resolveTargetFqnsLocally(receiver)
             }
-        localTarget?.let { return it }
+        if (localTargets.isNotEmpty()) return localTargets
 
-        val resolvedReceiverType = PropertiesDumbModeGuards.globalTypeOrNull(receiver.type, project) ?: return null
-        return PropertiesTypeInspector.extractTargetFqn(resolvedReceiverType)
+        val resolvedReceiverType =
+            PropertiesDumbModeGuards.globalTypeOrNull(receiver.type, receiver.project) ?: return emptySet()
+        return PropertiesTypeInspector.extractTargetFqns(resolvedReceiverType)
+    }
+
+    fun resolveArrayAccessTargetFqn(receiver: PhpExpression): String? {
+        return resolveArrayAccessTargetFqns(receiver).firstOrNull()
+    }
+
+    fun resolveLiteralTargetFqns(literal: StringLiteralExpression): Set<String> {
+        PsiGuards.getArrayAccessReceiver(literal)?.let { receiver ->
+            val accessTargets = resolveArrayAccessTargetFqns(receiver)
+            if (accessTargets.isNotEmpty()) {
+                return accessTargets
+            }
+        }
+
+        val arrayCreation = PsiGuards.getOwningArrayCreation(literal) ?: return emptySet()
+        return PropertiesTargetResolver.resolveTargetFqnsForArrayLiteral(arrayCreation)
     }
 
     fun resolveLiteralTargetFqn(literal: StringLiteralExpression): String? {
-        PsiGuards.getArrayAccessReceiver(literal)?.let { receiver ->
-            resolveArrayAccessTargetFqn(receiver)?.let { return it }
-        }
-
-        val arrayCreation = PsiGuards.getOwningArrayCreation(literal) ?: return null
-        return PropertiesTargetResolver.resolveTargetFqnForArrayLiteral(arrayCreation)
+        return resolveLiteralTargetFqns(literal).firstOrNull()
     }
 
-    fun resolveDocTargetFqn(element: PsiElement?, originalElement: PsiElement?): String? {
-        val target = element ?: originalElement ?: return null
+    fun resolveDocTargetFqns(element: PsiElement?, originalElement: PsiElement?): Set<String> {
+        val target = element ?: originalElement ?: return emptySet()
 
         var current: PsiElement? = target
         repeat(8) {
-            if (current == null) return null
+            if (current == null) return emptySet()
 
             val phpDocType = current as? PhpDocType
             if (phpDocType != null) {
-                return PropertiesTypeInspector.extractTargetFqn(phpDocType.declaredType)
+                return PropertiesTypeInspector.extractTargetFqns(phpDocType.declaredType)
             }
 
             current = current.parent
         }
 
-        return null
+        return emptySet()
+    }
+
+    fun resolveDocTargetFqn(element: PsiElement?, originalElement: PsiElement?): String? {
+        return resolveDocTargetFqns(element, originalElement).firstOrNull()
     }
 }

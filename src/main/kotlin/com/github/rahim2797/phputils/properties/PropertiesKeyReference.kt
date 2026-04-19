@@ -10,15 +10,16 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 class PropertiesKeyReference(
     literal: StringLiteralExpression,
     private val key: String,
-    private val targetFqn: String
+    private val targetFqns: Set<String>
 ) : PsiPolyVariantReferenceBase<StringLiteralExpression>(
     literal,
     keyRangeInLiteral(literal),
     true
 ) {
     override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
-        val field = PropertiesFieldCatalog.findField(element.project, targetFqn, key) ?: return emptyArray()
-        return arrayOf(PsiElementResolveResult(field))
+        return PropertiesFieldCatalog.findFields(element.project, targetFqns, key)
+            .map(::PsiElementResolveResult)
+            .toTypedArray()
     }
 
     override fun resolve(): Field? {
@@ -26,7 +27,7 @@ class PropertiesKeyReference(
     }
 
     override fun getVariants(): Array<Any> {
-        return PropertiesLookupElements.buildForLiteral(element, targetFqn)
+        return PropertiesLookupElements.buildForLiteral(element, targetFqns)
     }
     companion object {
         private fun keyRangeInLiteral(literal: StringLiteralExpression): TextRange {

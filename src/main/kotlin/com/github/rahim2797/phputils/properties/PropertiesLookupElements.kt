@@ -10,17 +10,18 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 object PropertiesLookupElements {
 
-    fun buildForLiteral(literal: StringLiteralExpression, targetFqn: String): Array<Any> {
-        return PropertiesFieldCatalog.getFields(literal.project, targetFqn)
+    fun buildForLiteral(literal: StringLiteralExpression, targetFqns: Collection<String>): Array<Any> {
+        return PropertiesFieldCatalog.getFields(literal.project, targetFqns)
             .asSequence()
             .filter { it.name.isNotBlank() }
-            .distinctBy { it.name }
-            .sortedBy { it.name }
-            .map { field ->
-                LookupElementBuilder.create(field.name)
-                    .withPresentableText(field.name)
-                    .withTypeText(PropertiesFieldCatalog.renderFieldType(field), true)
-                    .withIcon(field.getIcon(0))
+            .groupBy { it.name }
+            .toSortedMap()
+            .map { (name, fields) ->
+                val displayField = fields.first()
+                LookupElementBuilder.create(name)
+                    .withPresentableText(name)
+                    .withTypeText(PropertiesFieldCatalog.renderFieldType(fields), true)
+                    .withIcon(displayField.getIcon(0))
                     .withInsertHandler(PropertiesArrayKeyInsertHandler(literal))
             }
             .toList()

@@ -16,10 +16,10 @@ class PropertiesKeyReferenceContributor : PsiReferenceContributor() {
                 ): Array<PsiReference> {
                     val literal = element as StringLiteralExpression
                     val key = literal.contents
-                    val targetFqn = PropertiesContextResolver.resolveLiteralTargetFqn(literal)
-                        ?: return PsiReference.EMPTY_ARRAY
+                    val targetFqns = PropertiesContextResolver.resolveLiteralTargetFqns(literal)
+                    if (targetFqns.isEmpty()) return PsiReference.EMPTY_ARRAY
 
-                    return arrayOf(PropertiesKeyReference(literal, key, targetFqn))
+                    return arrayOf(PropertiesKeyReference(literal, key, targetFqns))
                 }
             }
         )
