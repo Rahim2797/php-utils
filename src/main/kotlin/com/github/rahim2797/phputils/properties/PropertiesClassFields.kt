@@ -56,17 +56,16 @@ object PropertiesClassFields {
         targetFqn: String
     ): Collection<PhpClass> {
         val candidates = linkedSetOf(targetFqn, targetFqn.removePrefix("\\"))
+        val matches = linkedSetOf<PhpClass>()
 
         for (candidate in candidates) {
             if (candidate.isBlank()) continue
 
-            val classes = phpIndex.getClassesByFQN(candidate)
-            if (classes.isNotEmpty()) {
-                return classes
-            }
+            matches += phpIndex.getClassesByFQN(candidate)
         }
 
-        return findClassesByPsiFallback(project, candidates)
+        matches += findClassesByPsiFallback(project, candidates)
+        return matches
     }
 
     private fun findClassesByPsiFallback(
@@ -111,7 +110,13 @@ object PropertiesClassFields {
         }
 
         if (!file.name.endsWith(".php", ignoreCase = true)) return
-        if (shortNames.isNotEmpty() && file.nameWithoutExtension !in shortNames) return
+        if (
+            shortNames.isNotEmpty() &&
+            file.nameWithoutExtension !in shortNames &&
+            file.name != IDE_HELPER_MODELS_FILE
+        ) {
+            return
+        }
 
         val psiFile = psiManager.findFile(file) ?: return
         val phpClasses = PsiTreeUtil.findChildrenOfType(psiFile, PhpClass::class.java)
