@@ -81,8 +81,15 @@ object PropertiesMagicTypeNames {
         for (phpUse in PsiTreeUtil.findChildrenOfType(file, PhpUse::class.java)) {
             if (phpUse.isOfConst || phpUse.isOfFunction || phpUse.isTraitImport) continue
 
-            val fqn = phpUse.targetReference?.fqn
+            val rawTarget = phpUse.targetReference?.text
                 ?.takeIf { it.isNotBlank() }
+                ?: phpUse.text
+                    .removePrefix("use")
+                    .substringBefore(';')
+                    .substringBefore(" as ")
+                    .trim()
+            val fqn = rawTarget
+                .takeIf { it.isNotBlank() }
                 ?.let(::normalizeAbsoluteFqn)
                 ?: continue
 

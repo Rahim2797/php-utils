@@ -11,27 +11,27 @@
     <extensions defaultExtensionNs="com.intellij">
         <completion.contributor
                 language="PHP"
-                implementationClass="com.github.rahim2797.phputils.properties.PropertiesPhpDocCompletionContributor"/>
+                implementationClass="com.github.rahim2797.phputils.magictypes.ide.MagicTypePhpDocCompletionContributor"/>
         <additionalLibraryRootsProvider implementation="com.github.rahim2797.phputils.properties.PropertiesStubLibraryRootsProvider"/>
         <psi.referenceContributor
                 language="PHP"
-                implementation="com.github.rahim2797.phputils.properties.PropertiesKeyReferenceContributor"/>
+                implementation="com.github.rahim2797.phputils.magictypes.ide.MagicTypeKeyReferenceContributor"/>
         <lang.inspectionSuppressor
                 language="PHP"
-                implementationClass="com.github.rahim2797.phputils.properties.PropertiesInspectionSuppressor"/>
+                implementationClass="com.github.rahim2797.phputils.magictypes.ide.MagicTypeInspectionSuppressor"/>
         <localInspection
                 language="PHP"
-                shortName="PropertiesTypeContradiction"
-                displayName="Properties magic type contradiction"
+                shortName="MagicTypeContradiction"
+                displayName="Magic type contradiction"
                 groupName="PHP Utilities"
                 enabledByDefault="true"
-                implementationClass="com.github.rahim2797.phputils.properties.PropertiesTypeContradictionInspection"/>
+                implementationClass="com.github.rahim2797.phputils.magictypes.ide.MagicTypeContradictionInspection"/>
         <lang.documentationProvider
                 language="PHP"
-                implementationClass="com.github.rahim2797.phputils.properties.PropertiesDocumentationProvider"/>
+                implementationClass="com.github.rahim2797.phputils.magictypes.ide.MagicTypeDocumentationProvider"/>
     </extensions>
 
     <extensions defaultExtensionNs="com.jetbrains">
-        <php.typeProvider4 implementation="com.github.rahim2797.phputils.properties.PropertiesArrayAccessTypeProvider"/>
+        <php.typeProvider4 implementation="com.github.rahim2797.phputils.magictypes.ide.MagicTypeArrayAccessTypeProvider"/>
     </extensions>
 </idea-plugin>

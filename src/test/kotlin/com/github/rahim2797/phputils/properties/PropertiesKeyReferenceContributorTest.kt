@@ -1,5 +1,6 @@
 package com.github.rahim2797.phputils.properties
 
+import com.github.rahim2797.phputils.magictypes.ide.MagicTypeKeyReference
 import com.intellij.codeInsight.lookup.LookupElementPresentation
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -29,7 +30,7 @@ class PropertiesKeyReferenceContributorTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? PropertiesKeyReference
+        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? MagicTypeKeyReference
         assertNotNull(reference)
 
         val field = reference!!.resolve()
@@ -63,7 +64,7 @@ class PropertiesKeyReferenceContributorTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? PropertiesKeyReference
+        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? MagicTypeKeyReference
         assertNotNull(reference)
 
         val variants = reference!!.variants
@@ -105,7 +106,7 @@ class PropertiesKeyReferenceContributorTest : BasePlatformTestCase() {
 
         val literal = PsiTreeUtil.findChildrenOfType(file, StringLiteralExpression::class.java)
             .first { it.contents == "email" }
-        val reference = literal.references.singleOrNull() as? PropertiesKeyReference
+        val reference = literal.references.singleOrNull() as? MagicTypeKeyReference
         assertNotNull(reference)
         assertEquals("email", reference!!.resolve()?.name)
     }
@@ -134,7 +135,7 @@ class PropertiesKeyReferenceContributorTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? PropertiesKeyReference
+        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? MagicTypeKeyReference
         assertNotNull(reference)
         assertEquals("email", reference!!.resolve()?.name)
     }
@@ -163,7 +164,7 @@ class PropertiesKeyReferenceContributorTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? PropertiesKeyReference
+        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? MagicTypeKeyReference
         assertNotNull(reference)
         assertEquals("email", reference!!.resolve()?.name)
     }
@@ -190,7 +191,7 @@ class PropertiesKeyReferenceContributorTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? PropertiesKeyReference
+        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? MagicTypeKeyReference
         assertNull(reference)
     }
 }

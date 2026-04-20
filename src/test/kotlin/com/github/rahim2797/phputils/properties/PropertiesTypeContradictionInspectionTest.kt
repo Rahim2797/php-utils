@@ -1,11 +1,12 @@
 package com.github.rahim2797.phputils.properties
 
+import com.github.rahim2797.phputils.magictypes.ide.MagicTypeContradictionInspection
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class PropertiesTypeContradictionInspectionTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
-        myFixture.enableInspections(PropertiesTypeContradictionInspection())
+        myFixture.enableInspections(MagicTypeContradictionInspection())
     }
 
     fun testReportsContradictingNativeReturnType() {

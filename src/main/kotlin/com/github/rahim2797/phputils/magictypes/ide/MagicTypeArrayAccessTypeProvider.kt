@@ -1,5 +1,10 @@
-package com.github.rahim2797.phputils.properties
+package com.github.rahim2797.phputils.magictypes.ide
 
+import com.github.rahim2797.phputils.magictypes.parser.MagicTypeParser
+import com.github.rahim2797.phputils.magictypes.shapes.MagicTypeShapeService
+import com.github.rahim2797.phputils.magictypes.targets.MagicTypeTargetResolver
+import com.github.rahim2797.phputils.properties.PropertiesArrayAccessTypeCodec
+import com.github.rahim2797.phputils.properties.PropertiesDumbModeGuards
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.ArrayAccessExpression
@@ -9,7 +14,7 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 
-class PropertiesArrayAccessTypeProvider : PhpTypeProvider4 {
+class MagicTypeArrayAccessTypeProvider : PhpTypeProvider4 {
     override fun getKey(): Char = 'Q'
 
     override fun getType(element: PsiElement): PhpType? {
@@ -20,31 +25,26 @@ class PropertiesArrayAccessTypeProvider : PhpTypeProvider4 {
         val key = keyLiteral.contents
         if (key.isBlank()) return null
 
-        // 1) Best case: resolve locally and return the final type directly.
-        val localTargetFqns = PropertiesContextResolver.resolveArrayAccessTargetFqns(receiver)
-        if (localTargetFqns.isNotEmpty()) {
+        val localMatches = MagicTypeTargetResolver.resolveArrayAccessMatches(receiver)
+        if (localMatches.isNotEmpty()) {
             val fieldType = PropertiesDumbModeGuards.runSmart(element.project) {
-                PropertiesFieldCatalog.getFieldType(element.project, localTargetFqns, key)
+                MagicTypeShapeService.fieldType(element.project, localMatches, key)
             }
             if (fieldType != null && fieldType.types.isNotEmpty()) {
                 return fieldType
             }
         }
 
-        // 2) Fallback: defer using an opaque payload.
         val receiverType = receiver.type
         if (receiverType.types.isEmpty()) return null
 
         val result = PhpType()
-
         for (receiverRaw in receiverType.types) {
             if (receiverRaw.isBlank()) continue
-
             val encoded = PropertiesArrayAccessTypeCodec.encode(receiverRaw, key)
             result.add("#${getKey()}$encoded")
         }
-
-        return if (result.types.isEmpty()) null else result
+        return result.takeIf { it.types.isNotEmpty() }
     }
 
     override fun complete(expression: String, project: Project): PhpType? {
@@ -53,18 +53,14 @@ class PropertiesArrayAccessTypeProvider : PhpTypeProvider4 {
         val prefix = "#${getKey()}"
         if (!expression.startsWith(prefix)) return null
 
-        val payloadText = expression.substring(prefix.length)
-        val payload = PropertiesArrayAccessTypeCodec.decode(payloadText) ?: return null
+        val payload = PropertiesArrayAccessTypeCodec.decode(expression.substring(prefix.length)) ?: return null
+        val matches = mutableListOf<com.github.rahim2797.phputils.magictypes.MagicTypeMatch>()
+        matches += MagicTypeParser.extractMatches(payload.receiverRawType)
+        PropertiesDumbModeGuards.globalTypeOrNull(PhpType().add(payload.receiverRawType), project)
+            ?.let { matches += MagicTypeParser.extractMatches(it) }
+        if (matches.isEmpty()) return null
 
-        val targetFqns = linkedSetOf<String>()
-        targetFqns += PropertiesTypeInspector.extractTargetFqns(payload.receiverRawType)
-        targetFqns += PropertiesDumbModeGuards
-            .globalTypeOrNull(PhpType().add(payload.receiverRawType), project)
-            ?.let { PropertiesTypeInspector.extractTargetFqns(it) }
-            .orEmpty()
-        if (targetFqns.isEmpty()) return null
-
-        return PropertiesFieldCatalog.getFieldType(project, targetFqns, payload.key)
+        return MagicTypeShapeService.fieldType(project, matches, payload.key)
     }
 
     override fun getBySignature(

@@ -1,12 +1,15 @@
 package com.github.rahim2797.phputils.properties
 
+import com.github.rahim2797.phputils.magictypes.ide.MagicTypeArrayAccessTypeProvider
+import com.github.rahim2797.phputils.magictypes.ide.MagicTypeDocumentationProvider
+import com.github.rahim2797.phputils.magictypes.ide.MagicTypeKeyReference
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.documentation.phpdoc.psi.PhpDocType
 import com.jetbrains.php.lang.psi.elements.Field
 
 class PropertiesLaravelFixtureIntegrationTest : LaravelFixtureTestCase() {
-    private val provider = PropertiesArrayAccessTypeProvider()
+    private val provider = MagicTypeArrayAccessTypeProvider()
 
     fun testEloquentCompletionUsesHelperAttributesInsteadOfModelFields() {
         openFixtureFile("tests/Plugin/Properties/product_completion.php")
@@ -25,7 +28,7 @@ class PropertiesLaravelFixtureIntegrationTest : LaravelFixtureTestCase() {
         val literal = PsiTreeUtil.findChildrenOfType(file, com.jetbrains.php.lang.psi.elements.StringLiteralExpression::class.java)
             .first { it.contents == "sku" }
 
-        val reference = literal.references.singleOrNull() as? PropertiesKeyReference
+        val reference = literal.references.singleOrNull() as? MagicTypeKeyReference
         assertNotNull(reference)
 
         val resolved = reference!!.resolve() as? Field
@@ -76,9 +79,13 @@ class PropertiesLaravelFixtureIntegrationTest : LaravelFixtureTestCase() {
     }
 
     fun testDtoCompletionStillUsesRealClassFields() {
-        openFixtureFile("tests/Plugin/Properties/dto_completion.php")
+        val file = openFixtureFile("tests/Plugin/Properties/dto_completion.php")
+        val literal = PsiTreeUtil.findChildrenOfType(file, com.jetbrains.php.lang.psi.elements.StringLiteralExpression::class.java)
+            .first { it.contents == "sku" }
+        val reference = literal.references.singleOrNull() as? MagicTypeKeyReference
+        assertNotNull(reference)
 
-        val variants = keyReferenceAtCaret().variants
+        val variants = reference!!.variants
             .mapNotNull { it as? LookupElement }
             .map { it.lookupString }
             .sorted()
@@ -91,7 +98,7 @@ class PropertiesLaravelFixtureIntegrationTest : LaravelFixtureTestCase() {
         val phpDocType = PsiTreeUtil.findChildOfType(file, PhpDocType::class.java)
         assertNotNull(phpDocType)
 
-        val html = PropertiesDocumentationProvider().generateDoc(phpDocType, phpDocType)
+        val html = MagicTypeDocumentationProvider().generateDoc(phpDocType, phpDocType)
         assertNotNull(html)
         assertTrue(html!!.contains("sku"))
         assertTrue(html.contains("price_cents"))

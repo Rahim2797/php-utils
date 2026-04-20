@@ -1,5 +1,6 @@
 package com.github.rahim2797.phputils.properties
 
+import com.github.rahim2797.phputils.magictypes.ide.MagicTypeDocumentationProvider
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.php.lang.documentation.phpdoc.psi.PhpDocType
@@ -32,7 +33,7 @@ class PropertiesDocumentationProviderTest : BasePlatformTestCase() {
         val phpDocType = PsiTreeUtil.findChildOfType(file, PhpDocType::class.java)
         assertNotNull(phpDocType)
 
-        val html = PropertiesDocumentationProvider().generateDoc(phpDocType, phpDocType)
+        val html = MagicTypeDocumentationProvider().generateDoc(phpDocType, phpDocType)
         assertNotNull(html)
         assertTrue(html!!.contains("array{"))
         assertTrue(html.contains("email"))

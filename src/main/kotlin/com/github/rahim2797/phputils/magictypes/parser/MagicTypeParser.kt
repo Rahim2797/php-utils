@@ -1,86 +1,89 @@
-package com.github.rahim2797.phputils.properties
+package com.github.rahim2797.phputils.magictypes.parser
 
+import com.github.rahim2797.phputils.magictypes.MagicTypeMatch
+import com.github.rahim2797.phputils.magictypes.MagicTypeRegistry
+import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
-object PropertiesTypeInspector {
-    fun extractTargetFqns(type: PhpType, context: com.intellij.psi.PsiElement? = null): Set<String> {
-        val targets = linkedSetOf<String>()
+object MagicTypeParser {
+    fun extractMatches(type: PhpType, context: PsiElement? = null): List<MagicTypeMatch> {
+        val matches = linkedSetOf<MagicTypeMatch>()
 
         for (raw in type.typesWithParametrisedParts) {
-            targets += extractTargetFqns(raw, context)
+            matches += extractMatches(raw, context)
         }
 
-        return targets
+        return MagicTypeMatch.merge(matches)
     }
 
-    fun extractTargetFqn(type: PhpType, context: com.intellij.psi.PsiElement? = null): String? {
-        return extractTargetFqns(type, context).firstOrNull()
-    }
-
-    fun extractTargetFqns(raw: String, context: com.intellij.psi.PsiElement? = null): Set<String> {
+    fun extractMatches(raw: String, context: PsiElement? = null): List<MagicTypeMatch> {
         val normalized = stripOuterWrappers(stripPluralSuffix(raw.trim()))
-        if (normalized.isBlank()) return emptySet()
+        if (normalized.isBlank()) return emptyList()
 
         val topLevelParts = splitTopLevel(normalized, '|', '&')
         if (topLevelParts.size > 1) {
-            return topLevelParts
-                .asSequence()
-                .flatMap { extractTargetFqns(it, context).asSequence() }
-                .toCollection(linkedSetOf())
+            return MagicTypeMatch.merge(
+                topLevelParts.flatMap { extractMatches(it, context) }
+            )
         }
 
         val base = removeParametrisedType(normalized)
+        val normalizedBase = normalizeSignatureToken(base)
         val parameters = PhpType.getParametrizedParts(normalized)
 
-        if (isPropertiesBase(base, context)) {
-            val firstParameter = parameters.firstOrNull() ?: return emptySet()
-            return extractClassLikeTargets(firstParameter, context)
+        val directMatches = MagicTypeRegistry.handlers
+            .asSequence()
+            .filter { it.matchesBase(normalizedBase, context) }
+            .mapNotNull { handler ->
+                val targets = handler.extractTargetFqns(parameters, context, ::extractClassLikeTargets)
+                targets.takeIf { it.isNotEmpty() }?.let { MagicTypeMatch(handler, it) }
+            }
+            .toList()
+        if (directMatches.isNotEmpty()) {
+            return MagicTypeMatch.merge(directMatches)
         }
 
-        if (parameters.isEmpty()) return emptySet()
-
-        return parameters
-            .asSequence()
-            .flatMap { extractTargetFqns(it, context).asSequence() }
-            .toCollection(linkedSetOf())
+        if (parameters.isEmpty()) return emptyList()
+        return MagicTypeMatch.merge(parameters.flatMap { extractMatches(it, context) })
     }
 
-    fun extractTargetFqn(raw: String, context: com.intellij.psi.PsiElement? = null): String? {
-        return extractTargetFqns(raw, context).firstOrNull()
+    fun extractTargetFqns(type: PhpType, context: PsiElement? = null): Set<String> {
+        return extractMatches(type, context).flatMapTo(linkedSetOf()) { it.targetFqns }
     }
 
-    fun containsPropertiesType(type: PhpType, context: com.intellij.psi.PsiElement? = null): Boolean {
-        return extractTargetFqns(type, context).isNotEmpty()
+    fun extractTargetFqns(raw: String, context: PsiElement? = null): Set<String> {
+        return extractMatches(raw, context).flatMapTo(linkedSetOf()) { it.targetFqns }
     }
 
-    private fun extractClassLikeTargets(raw: String, context: com.intellij.psi.PsiElement?): Set<String> {
+    fun extractFirstMatch(type: PhpType, context: PsiElement? = null): MagicTypeMatch? {
+        return extractMatches(type, context).firstOrNull()
+    }
+
+    fun extractFirstMatch(raw: String, context: PsiElement? = null): MagicTypeMatch? {
+        return extractMatches(raw, context).firstOrNull()
+    }
+
+    fun extractClassLikeTargets(raw: String, context: PsiElement?): Set<String> {
         val normalized = stripOuterWrappers(stripPluralSuffix(raw.trim()))
         if (normalized.isBlank()) return emptySet()
 
         val topLevelParts = splitTopLevel(normalized, '|', '&', ',')
         if (topLevelParts.size > 1) {
             return topLevelParts
-                .asSequence()
-                .flatMap { extractClassLikeTargets(it, context).asSequence() }
-                .toCollection(linkedSetOf())
+                .flatMapTo(linkedSetOf()) { extractClassLikeTargets(it, context) }
         }
 
         val base = normalizePotentialClassToken(removeParametrisedType(normalized), context) ?: return emptySet()
         return linkedSetOf(base)
     }
 
-    private fun isPropertiesBase(base: String, context: com.intellij.psi.PsiElement?): Boolean {
-        val normalized = normalizeSignatureToken(base)
-        return PropertiesMagicTypeNames.resolveMagicTypeReference(normalized, context) != null
-    }
-
-    private fun normalizePotentialClassToken(raw: String, context: com.intellij.psi.PsiElement?): String? {
+    private fun normalizePotentialClassToken(raw: String, context: PsiElement?): String? {
         val normalized = normalizeSignatureToken(raw)
         if (normalized.isBlank()) return null
 
         return when (normalized.lowercase()) {
             "self", "static", "parent" -> normalized.lowercase()
-            else -> PropertiesMagicTypeNames.resolveClassLikeName(normalized, context)
+            else -> com.github.rahim2797.phputils.properties.PropertiesMagicTypeNames.resolveClassLikeName(normalized, context)
         }
     }
 
@@ -150,9 +153,7 @@ object PropertiesTypeInspector {
             val isTopLevel = angleDepth == 0 && braceDepth == 0 && bracketDepth == 0 && parenDepth == 0
             if (isTopLevel && char in separators) {
                 val part = current.toString().trim()
-                if (part.isNotEmpty()) {
-                    parts += part
-                }
+                if (part.isNotEmpty()) parts += part
                 current.clear()
                 continue
             }
@@ -161,10 +162,7 @@ object PropertiesTypeInspector {
         }
 
         val tail = current.toString().trim()
-        if (tail.isNotEmpty()) {
-            parts += tail
-        }
-
+        if (tail.isNotEmpty()) parts += tail
         return if (parts.isEmpty()) listOf(raw) else parts
     }
 }

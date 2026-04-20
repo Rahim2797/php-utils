@@ -1,5 +1,8 @@
 package com.github.rahim2797.phputils.properties
 
+import com.github.rahim2797.phputils.magictypes.ide.MagicTypeArrayAccessTypeProvider
+import com.github.rahim2797.phputils.magictypes.ide.MagicTypeKeyReference
+import com.github.rahim2797.phputils.magictypes.targets.MagicTypeTargetResolver
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.php.lang.psi.elements.ArrayAccessExpression
@@ -8,7 +11,7 @@ import com.jetbrains.php.lang.psi.elements.PhpExpression
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 class PropertiesCrossFileSupportTest : BasePlatformTestCase() {
-    private val provider = PropertiesArrayAccessTypeProvider()
+    private val provider = MagicTypeArrayAccessTypeProvider()
 
     fun testCrossFileFunctionReturnSupportsArrayAccessTypeInference() {
         myFixture.addFileToProject(
@@ -48,7 +51,7 @@ class PropertiesCrossFileSupportTest : BasePlatformTestCase() {
 
         val receiver = arrayAccess!!.value as? PhpExpression
         assertNotNull(receiver)
-        assertEquals(setOf("\\User"), PropertiesContextResolver.resolveArrayAccessTargetFqns(receiver!!))
+        assertEquals(setOf("\\User"), MagicTypeTargetResolver.resolveArrayAccessMatches(receiver!!).flatMapTo(linkedSetOf()) { it.targetFqns })
 
         val resolvedType = provider.getType(arrayAccess)
         assertNotNull(resolvedType)
@@ -86,7 +89,7 @@ class PropertiesCrossFileSupportTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? PropertiesKeyReference
+        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? MagicTypeKeyReference
         assertNotNull(reference)
         assertEquals("email", (reference!!.resolve() as? Field)?.name)
     }
@@ -177,7 +180,7 @@ class PropertiesCrossFileSupportTest : BasePlatformTestCase() {
 
         val literal = PsiTreeUtil.findChildrenOfType(file, StringLiteralExpression::class.java)
             .first { it.contents == "name" }
-        val reference = literal.references.singleOrNull() as? PropertiesKeyReference
+        val reference = literal.references.singleOrNull() as? MagicTypeKeyReference
         assertNotNull(reference)
         assertEquals("name", (reference!!.resolve() as? Field)?.name)
     }
@@ -235,7 +238,7 @@ class PropertiesCrossFileSupportTest : BasePlatformTestCase() {
         assertTrue(valueType!!.types.contains("\\string"))
         assertTrue(valueType.types.contains("\\int"))
 
-        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? PropertiesKeyReference
+        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? MagicTypeKeyReference
         assertNotNull(reference)
 
         val variants = reference!!.variants

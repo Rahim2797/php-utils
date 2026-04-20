@@ -1,5 +1,6 @@
 package com.github.rahim2797.phputils.properties
 
+import com.github.rahim2797.phputils.magictypes.ide.MagicTypeKeyReference
 import com.intellij.openapi.project.DumbService
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
@@ -25,9 +26,9 @@ abstract class LaravelFixtureTestCase : BasePlatformTestCase() {
         return myFixture.file
     }
 
-    protected fun keyReferenceAtCaret(): PropertiesKeyReference {
-        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? PropertiesKeyReference
-        assertNotNull("Expected a PropertiesKeyReference at the caret", reference)
+    protected fun keyReferenceAtCaret(): MagicTypeKeyReference {
+        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? MagicTypeKeyReference
+        assertNotNull("Expected a MagicTypeKeyReference at the caret", reference)
         return reference!!
     }
 

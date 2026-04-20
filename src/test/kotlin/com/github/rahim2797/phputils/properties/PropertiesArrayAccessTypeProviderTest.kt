@@ -1,5 +1,8 @@
 package com.github.rahim2797.phputils.properties
 
+import com.github.rahim2797.phputils.magictypes.ide.MagicTypeArrayAccessTypeProvider
+import com.github.rahim2797.phputils.magictypes.parser.MagicTypeParser
+import com.github.rahim2797.phputils.magictypes.targets.MagicTypeTargetResolver
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.DumbModeTestUtils
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -8,7 +11,7 @@ import com.jetbrains.php.lang.psi.elements.PhpExpression
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 class PropertiesArrayAccessTypeProviderTest : BasePlatformTestCase() {
-    private val provider = PropertiesArrayAccessTypeProvider()
+    private val provider = MagicTypeArrayAccessTypeProvider()
 
     fun testLocalReceiverResolutionRemainsAvailable() {
         myFixture.addFileToProject(
@@ -39,7 +42,8 @@ class PropertiesArrayAccessTypeProviderTest : BasePlatformTestCase() {
 
         val receiver = arrayAccess!!.value as? PhpExpression
         assertNotNull(receiver)
-        assertEquals("\\User", PropertiesTargetResolver.resolveTargetFqnLocally(receiver!!))
+        val match = MagicTypeTargetResolver.resolveArrayAccessMatches(receiver!!).firstOrNull()
+        assertEquals("\\User", match?.targetFqns?.firstOrNull())
 
         val resolvedType = provider.getType(arrayAccess)
         assertNotNull(resolvedType)
@@ -72,7 +76,7 @@ class PropertiesArrayAccessTypeProviderTest : BasePlatformTestCase() {
         val encoded = PropertiesArrayAccessTypeCodec.encode("#C\\Rahim2797\\MagicTypes\\Properties<\\User>", "name")
         val payload = PropertiesArrayAccessTypeCodec.decode(encoded)
         assertNotNull(payload)
-        assertEquals("\\User", PropertiesTypeInspector.extractTargetFqn(payload!!.receiverRawType))
+        assertEquals("\\User", MagicTypeParser.extractTargetFqns(payload!!.receiverRawType).firstOrNull())
         assertEquals("name", payload.key)
     }
 
@@ -106,7 +110,7 @@ class PropertiesArrayAccessTypeProviderTest : BasePlatformTestCase() {
 
         val arrayCreation = PsiGuards.getOwningArrayCreation(literal)
         assertNotNull(arrayCreation)
-        assertEquals("\\User", PropertiesTargetResolver.resolveTargetFqnForArrayLiteral(arrayCreation!!))
+        assertEquals("\\User", MagicTypeTargetResolver.resolveArrayLiteralMatches(arrayCreation!!).firstOrNull()?.targetFqns?.firstOrNull())
     }
 
     fun testTypeProviderDoesNotCrashInDumbMode() {
