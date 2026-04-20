@@ -84,23 +84,26 @@ object MagicTypeTargetResolver {
     }
 
     private fun resolveFromAssignment(arrayCreation: ArrayCreationExpression): List<MagicTypeMatch> {
-        val assignment = arrayCreation.parent as? AssignmentExpression ?: return emptyList()
-        if (assignment.value !== arrayCreation) return emptyList()
+        val contextualExpression = PsiGuards.getContextualizedArrayExpression(arrayCreation)
+        val assignment = contextualExpression.parent as? AssignmentExpression ?: return emptyList()
+        if (assignment.value !== contextualExpression) return emptyList()
         val target = assignment.variable as? PhpExpression ?: return emptyList()
         return resolveLocally(target, mutableSetOf(), allowIndexAccess = true)
     }
 
     private fun resolveFromReturn(arrayCreation: ArrayCreationExpression): List<MagicTypeMatch> {
-        val phpReturn = arrayCreation.parent as? PhpReturn ?: return emptyList()
-        if (phpReturn.argument !== arrayCreation) return emptyList()
+        val contextualExpression = PsiGuards.getContextualizedArrayExpression(arrayCreation)
+        val phpReturn = contextualExpression.parent as? PhpReturn ?: return emptyList()
+        if (phpReturn.argument !== contextualExpression) return emptyList()
         val function = PsiTreeUtil.getParentOfType(phpReturn, Function::class.java, false) ?: return emptyList()
         return extractReturnMatches(function, allowIndexAccess = true)
     }
 
     private fun resolveFromArgument(arrayCreation: ArrayCreationExpression): List<MagicTypeMatch> {
-        val paramList = arrayCreation.parent as? ParameterList ?: return emptyList()
+        val contextualExpression = PsiGuards.getContextualizedArrayExpression(arrayCreation)
+        val paramList = contextualExpression.parent as? ParameterList ?: return emptyList()
         val parameters = paramList.parameters
-        val argIndex = parameters.indexOfFirst { it === arrayCreation }
+        val argIndex = parameters.indexOfFirst { it === contextualExpression }
         if (argIndex < 0) return emptyList()
         val call = paramList.parent ?: return emptyList()
 

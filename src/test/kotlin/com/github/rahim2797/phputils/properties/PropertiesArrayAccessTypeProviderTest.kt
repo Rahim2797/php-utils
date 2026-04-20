@@ -113,6 +113,41 @@ class PropertiesArrayAccessTypeProviderTest : BasePlatformTestCase() {
         assertEquals("\\User", MagicTypeTargetResolver.resolveArrayLiteralMatches(arrayCreation!!).firstOrNull()?.targetFqns?.firstOrNull())
     }
 
+    fun testArrayLiteralTargetInferenceFromConditionalAssignmentDocStillWorks() {
+        myFixture.addFileToProject(
+            "User.php",
+            """
+            <?php
+            class User {
+                /** @var string */
+                public ${'$'}email;
+            }
+            """.trimIndent()
+        )
+
+        val file = myFixture.configureByText(
+            "arrayLiteralConditionalAssignment.php",
+            """
+            <?php
+            function fallback(): array { return []; }
+
+            /**
+             * @var \Rahim2797\MagicTypes\Properties<\User> ${'$'}data
+             */
+            ${'$'}data = rand(0, 1)
+                ? fallback()
+                : ['email' => 'Ada'];
+            """.trimIndent()
+        )
+
+        val literal = PsiTreeUtil.findChildrenOfType(file, StringLiteralExpression::class.java)
+            .first { it.contents == "email" }
+
+        val arrayCreation = PsiGuards.getOwningArrayCreation(literal)
+        assertNotNull(arrayCreation)
+        assertEquals("\\User", MagicTypeTargetResolver.resolveArrayLiteralMatches(arrayCreation!!).firstOrNull()?.targetFqns?.firstOrNull())
+    }
+
     fun testTypeProviderDoesNotCrashInDumbMode() {
         myFixture.addFileToProject(
             "User.php",

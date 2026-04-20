@@ -12,10 +12,12 @@ import com.jetbrains.php.PhpIndex
 
 class MagicTypeDocumentationProvider : AbstractDocumentationProvider() {
     override fun generateDoc(element: PsiElement?, originalElement: PsiElement?): String? {
-        val matches = MagicTypeTargetResolver.resolveDocMatches(element, originalElement)
-        val shape = MagicTypeShapeService.resolveShapes((element ?: originalElement)?.project ?: return null, matches).firstOrNull()
+        val context = MagicTypeDocContextResolver.resolve(element, originalElement)
+        val matches = MagicTypeTargetResolver.resolveDocMatches(context ?: element, originalElement ?: context)
+        val project = (context ?: element ?: originalElement)?.project ?: return null
+        val shape = MagicTypeShapeService.resolveShapes(project, matches).firstOrNull()
             ?: return null
-        return MagicTypeShapeFormatter.formatPopupHtml((element ?: originalElement)!!.project, shape, element ?: originalElement)
+        return MagicTypeShapeFormatter.formatPopupHtml(project, shape, context ?: element ?: originalElement)
     }
 
     override fun getCustomDocumentationElement(
@@ -23,7 +25,7 @@ class MagicTypeDocumentationProvider : AbstractDocumentationProvider() {
         file: PsiFile,
         contextElement: PsiElement?,
         targetOffset: Int
-    ): PsiElement? = contextElement
+    ): PsiElement? = MagicTypeDocContextResolver.resolve(contextElement) ?: contextElement
 
     override fun getDocumentationElementForLink(psiManager: PsiManager, link: String, context: PsiElement): PsiElement? {
         val phpIndex = PhpIndex.getInstance(psiManager.project)

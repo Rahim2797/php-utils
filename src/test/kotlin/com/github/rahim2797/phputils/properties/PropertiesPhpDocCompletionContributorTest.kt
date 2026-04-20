@@ -54,6 +54,38 @@ class PropertiesPhpDocCompletionContributorTest : BasePlatformTestCase() {
         assertTrue(propertiesEntries.any { it.typeText != PropertiesMagicTypeNames.QUALIFIED_NAME })
     }
 
+    fun testPhpDocCompletionStillIncludesOrdinaryContributorsAlongsideMagicType() {
+        myFixture.addFileToProject(
+            "AppProperties.php",
+            """
+            <?php
+            namespace App;
+
+            class Properties {}
+            """.trimIndent()
+        )
+
+        myFixture.configureByText(
+            "completion.php",
+            """
+            <?php
+            /** @var Pro<caret> ${'$'}props */
+            """.trimIndent()
+        )
+
+        val items = myFixture.completeBasic()
+        assertNotNull(items)
+
+        val propertiesEntries = items!!
+            .map {
+                LookupElementPresentation().also(it::renderElement)
+            }
+            .filter { it.itemText == "Properties" }
+
+        assertTrue(propertiesEntries.any { it.typeText == PropertiesMagicTypeNames.QUALIFIED_NAME })
+        assertTrue(propertiesEntries.any { it.typeText != PropertiesMagicTypeNames.QUALIFIED_NAME })
+    }
+
     fun testMagicPropertiesInsertionAddsCanonicalFqnWithoutImport() {
         myFixture.configureByText(
             "insertGenerics.php",

@@ -6,9 +6,9 @@ import com.intellij.openapi.roots.AdditionalLibraryRootsProvider
 import com.intellij.openapi.roots.SyntheticLibrary
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 
 class PropertiesStubLibraryRootsProvider : AdditionalLibraryRootsProvider() {
     override fun getAdditionalProjectLibraries(project: Project): Collection<SyntheticLibrary> {
@@ -21,16 +21,39 @@ class PropertiesStubLibraryRootsProvider : AdditionalLibraryRootsProvider() {
     }
 
     private fun ensureStubRoot(): VirtualFile? {
-        val targetRoot = Path.of(PathManager.getSystemPath(), "php-utils", "stubs")
-        val targetFile = targetRoot.resolve("Rahim2797").resolve("MagicTypes").resolve("Properties.php")
-        val resourcePath = "stubs/Rahim2797/MagicTypes/Properties.php"
+        val targetRoot = PropertiesStubSupport.ensureStubRootOnDisk(
+            targetRoot = Path.of(PathManager.getSystemPath(), "php-utils", "stubs"),
+            classLoader = javaClass.classLoader,
+        ) ?: return null
 
-        val inputStream = javaClass.classLoader.getResourceAsStream(resourcePath) ?: return null
-        inputStream.use { input ->
-            Files.createDirectories(targetFile.parent)
-            Files.copy(input, targetFile, StandardCopyOption.REPLACE_EXISTING)
+        return PropertiesStubSupport.refreshStubRoot(targetRoot)
+    }
+}
+
+internal object PropertiesStubSupport {
+    private const val RESOURCE_PATH = "stubs/Rahim2797/MagicTypes/Properties.php"
+
+    fun ensureStubRootOnDisk(targetRoot: Path, classLoader: ClassLoader): Path? {
+        val targetFile = targetRoot.resolve("Rahim2797").resolve("MagicTypes").resolve("Properties.php")
+
+        Files.createDirectories(targetFile.parent)
+        if (Files.exists(targetFile)) {
+            return targetRoot
         }
 
+        val inputStream = classLoader.getResourceAsStream(RESOURCE_PATH) ?: return null
+        inputStream.use { input ->
+            try {
+                Files.copy(input, targetFile)
+            } catch (_: FileAlreadyExistsException) {
+                // Another concurrent caller created the stub first; that is a valid final state.
+            }
+        }
+
+        return targetRoot
+    }
+
+    fun refreshStubRoot(targetRoot: Path): VirtualFile? {
         return LocalFileSystem.getInstance().refreshAndFindFileByNioFile(targetRoot)
     }
 }

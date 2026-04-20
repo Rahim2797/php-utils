@@ -111,6 +111,83 @@ class PropertiesKeyReferenceContributorTest : BasePlatformTestCase() {
         assertEquals("email", reference!!.resolve()?.name)
     }
 
+    fun testConditionalArrayLiteralAssignmentKeyResolvesToAnnotatedVariableField() {
+        myFixture.addFileToProject(
+            "User.php",
+            """
+            <?php
+            class User {
+                /** @var string */
+                public ${'$'}email;
+            }
+            """.trimIndent()
+        )
+
+        val file = myFixture.configureByText(
+            "conditionalLiteralResolve.php",
+            """
+            <?php
+            function fallback(): array { return []; }
+
+            /** @var \Rahim2797\MagicTypes\Properties<\User> ${'$'}props */
+            ${'$'}props = rand(0, 1)
+                ? fallback()
+                : [
+                    'ema<caret>il' => 'hello@example.com',
+                ];
+            """.trimIndent()
+        )
+
+        val literal = PsiTreeUtil.findChildrenOfType(file, StringLiteralExpression::class.java)
+            .first { it.contents == "email" }
+        val reference = literal.references.singleOrNull() as? MagicTypeKeyReference
+        assertNotNull(reference)
+        assertEquals("email", reference!!.resolve()?.name)
+    }
+
+    fun testConditionalArrayLiteralAssignmentVariantsExposeKnownPropertyKeys() {
+        myFixture.addFileToProject(
+            "User.php",
+            """
+            <?php
+            class User {
+                /** @var string */
+                public ${'$'}email;
+
+                /** @var bool */
+                public ${'$'}is_active;
+            }
+            """.trimIndent()
+        )
+
+        myFixture.configureByText(
+            "conditionalVariants.php",
+            """
+            <?php
+            function fallback(): array { return []; }
+
+            /** @var \Rahim2797\MagicTypes\Properties<\User> ${'$'}props */
+            ${'$'}props = rand(0, 1)
+                ? fallback()
+                : [
+                    '<caret>' => true,
+                ];
+            """.trimIndent()
+        )
+
+        val reference = myFixture.file.findReferenceAt(myFixture.caretOffset) as? MagicTypeKeyReference
+        assertNotNull(reference)
+
+        val variants = reference!!.variants
+            .mapNotNull { it as? com.intellij.codeInsight.lookup.LookupElement }
+            .map {
+                LookupElementPresentation().also(it::renderElement)
+            }
+
+        assertEquals(listOf("email", "is_active"), variants.mapNotNull { it.itemText })
+        assertEquals(listOf("string", "bool"), variants.mapNotNull { it.typeText })
+    }
+
     fun testImportedCanonicalPropertiesTypeResolvesAsMagicType() {
         myFixture.addFileToProject(
             "User.php",

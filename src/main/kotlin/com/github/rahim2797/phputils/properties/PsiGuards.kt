@@ -31,6 +31,23 @@ object PsiGuards {
         return PsiTreeUtil.getParentOfType(hash, ArrayCreationExpression::class.java, false)
     }
 
+    fun getContextualizedArrayExpression(arrayCreation: ArrayCreationExpression): PhpExpression {
+        var current: PhpExpression = arrayCreation
+
+        while (true) {
+            val parent = current.parent
+            current = when {
+                parent is ParenthesizedExpression && parent.argument === current -> parent
+                parent is TernaryExpression &&
+                    (parent.trueVariant === current || parent.falseVariant === current) -> parent
+                parent is BinaryExpression &&
+                    parent.operation?.text == "??" &&
+                    (parent.leftOperand === current || parent.rightOperand === current) -> parent
+                else -> return current
+            }
+        }
+    }
+
     fun isArrayLiteralKeyContext(literal: StringLiteralExpression): Boolean {
         return getOwningArrayCreation(literal) != null
     }

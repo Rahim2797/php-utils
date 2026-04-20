@@ -3,6 +3,7 @@ package com.github.rahim2797.phputils.magictypes.ide
 import com.github.rahim2797.phputils.magictypes.MagicTypeRegistry
 import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionParameters
+import com.intellij.codeInsight.completion.CompletionResult
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.CompletionSorter
 import com.intellij.codeInsight.completion.InsertHandler
@@ -11,8 +12,10 @@ import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.codeInsight.lookup.LookupElementWeigher
 import com.intellij.codeInsight.lookup.WeighingContext
+import com.intellij.util.Consumer
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.documentation.phpdoc.psi.PhpDocType
+import java.lang.reflect.Method
 
 class MagicTypePhpDocCompletionContributor : CompletionContributor() {
     override fun fillCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
@@ -30,7 +33,7 @@ class MagicTypePhpDocCompletionContributor : CompletionContributor() {
             val typeText = it.preferredTypeReference(null).removePrefix("\\")
             sorted.addElement(MagicTypeLookup.build(it.shortName, typeText, it))
         }
-        result.runRemainingContributors(parameters, { completionResult -> sorted.addElement(completionResult.lookupElement) }, true, sorter)
+        sorted.runRemainingContributorsCompat(parameters, sorter)
         result.stopHere()
     }
 
@@ -39,6 +42,36 @@ class MagicTypePhpDocCompletionContributor : CompletionContributor() {
         if (relativeOffset < 0) return false
         val genericStart = phpDocType.text.indexOf('<').let { if (it >= 0) it else Int.MAX_VALUE }
         return relativeOffset <= genericStart
+    }
+
+    private fun CompletionResultSet.runRemainingContributorsCompat(
+        parameters: CompletionParameters,
+        sorter: CompletionSorter
+    ) {
+        val contributorResults = Consumer<CompletionResult> { completionResult -> passResult(completionResult) }
+        val withSorter = runRemainingContributorsWithSorter
+        if (withSorter != null) {
+            withSorter.invoke(this, parameters, contributorResults, true, sorter)
+            return
+        }
+
+        runRemainingContributors(parameters, contributorResults, true)
+    }
+
+    private companion object {
+        val runRemainingContributorsWithSorter: Method? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+            CompletionResultSet::class.java.methods.firstOrNull { method ->
+                method.name == "runRemainingContributors" &&
+                    method.parameterTypes.contentEquals(
+                        arrayOf(
+                            CompletionParameters::class.java,
+                            Consumer::class.java,
+                            Boolean::class.javaPrimitiveType!!,
+                            CompletionSorter::class.java,
+                        )
+                    )
+            }
+        }
     }
 }
 

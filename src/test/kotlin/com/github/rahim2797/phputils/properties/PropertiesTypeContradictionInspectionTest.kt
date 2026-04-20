@@ -1,6 +1,7 @@
 package com.github.rahim2797.phputils.properties
 
 import com.github.rahim2797.phputils.magictypes.ide.MagicTypeContradictionInspection
+import com.github.rahim2797.phputils.magictypes.ide.MagicTypeInspectionSuppressor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class PropertiesTypeContradictionInspectionTest : BasePlatformTestCase() {
@@ -94,5 +95,63 @@ class PropertiesTypeContradictionInspectionTest : BasePlatformTestCase() {
         )
 
         myFixture.checkHighlighting()
+    }
+
+    fun testSuppressesPhpDocSignatureInspectionForImportedPropertiesParam() {
+        myFixture.addFileToProject(
+            "User.php",
+            """
+            <?php
+            class User {
+                /** @var string */
+                public $name;
+            }
+            """.trimIndent()
+        )
+
+        myFixture.configureByText(
+            "signatureSuppressedImported.php",
+            """
+            <?php
+            use Rahim2797\MagicTypes\Properties;
+
+            /**
+             * @param Pro<caret>perties<User> ${'$'}attributes
+             */
+            function takesAttributes(array ${'$'}attributes): void {}
+            """.trimIndent()
+        )
+
+        val element = myFixture.file.findElementAt(myFixture.caretOffset)
+        assertNotNull(element)
+        assertTrue(MagicTypeInspectionSuppressor().isSuppressedFor(element!!, "PhpDocSignatureInspection"))
+    }
+
+    fun testSuppressesPhpDocSignatureInspectionForFullyQualifiedPropertiesParam() {
+        myFixture.addFileToProject(
+            "User.php",
+            """
+            <?php
+            class User {
+                /** @var string */
+                public $name;
+            }
+            """.trimIndent()
+        )
+
+        myFixture.configureByText(
+            "signatureSuppressedFqn.php",
+            """
+            <?php
+            /**
+             * @param \Rahim2797\MagicTypes\Pro<caret>perties<User> ${'$'}attributes
+             */
+            function takesAttributes(array ${'$'}attributes): void {}
+            """.trimIndent()
+        )
+
+        val element = myFixture.file.findElementAt(myFixture.caretOffset)
+        assertNotNull(element)
+        assertTrue(MagicTypeInspectionSuppressor().isSuppressedFor(element!!, "PhpDocSignatureInspection"))
     }
 }
