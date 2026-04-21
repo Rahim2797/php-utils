@@ -115,7 +115,11 @@ object MagicTypeTargetResolver {
     }
 
     private fun resolveCallArgumentMatches(call: FunctionReference, argIndex: Int): List<MagicTypeMatch> {
-        val resolvedFunctions = call.multiResolve(false).mapNotNull { it.element as? Function }
+        val resolvedFunctions = PropertiesDumbModeGuards.safeMultiResolve(
+            call.project,
+            "function argument resolution"
+        ) { call.multiResolve(false) }
+            .mapNotNull { it.element as? Function }
         if (resolvedFunctions.isNotEmpty()) {
             return MagicTypeMatch.merge(
                 resolvedFunctions.flatMap { extractParamMatches(it, argIndex, allowIndexAccess = true) }
@@ -136,7 +140,7 @@ object MagicTypeTargetResolver {
 
     private fun resolveMethodArgumentMatches(call: MethodReference, argIndex: Int): List<MagicTypeMatch> {
         return MagicTypeMatch.merge(
-            call.multiResolve(false)
+            PropertiesDumbModeGuards.safeMultiResolve(call.project, "method argument resolution") { call.multiResolve(false) }
                 .asSequence()
                 .mapNotNull(ResolveResult::getElement)
                 .mapNotNull { it as? Method }
@@ -201,7 +205,10 @@ object MagicTypeTargetResolver {
         return when (expression) {
             is ParenthesizedExpression -> resolveLocally(expression.argument as? PhpExpression, visited, allowIndexAccess)
             is FunctionReference -> MagicTypeMatch.merge(
-                expression.multiResolve(false)
+                PropertiesDumbModeGuards.safeMultiResolve(
+                    expression.project,
+                    "function return resolution"
+                ) { expression.multiResolve(false) }
                     .asSequence()
                     .mapNotNull(ResolveResult::getElement)
                     .mapNotNull { it as? Function }
@@ -209,7 +216,10 @@ object MagicTypeTargetResolver {
                     .toList()
             )
             is MethodReference -> MagicTypeMatch.merge(
-                expression.multiResolve(false)
+                PropertiesDumbModeGuards.safeMultiResolve(
+                    expression.project,
+                    "method return resolution"
+                ) { expression.multiResolve(false) }
                     .asSequence()
                     .mapNotNull(ResolveResult::getElement)
                     .mapNotNull { it as? Method }
@@ -217,7 +227,10 @@ object MagicTypeTargetResolver {
                     .toList()
             )
             is FieldReference -> {
-                val field = expression.resolve() as? Field ?: return emptyList()
+                val field = PropertiesDumbModeGuards.safeResolve(
+                    expression.project,
+                    "field resolution"
+                ) { expression.resolve() } as? Field ?: return emptyList()
                 extractMatchesFromTypedElement(field, expression.project, allowIndexAccess, contextClassOf(field))
             }
             else -> extractMatchesFromType(expression.type, expression.project, allowIndexAccess, contextClassOf(expression), expression)

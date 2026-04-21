@@ -180,6 +180,14 @@ class PropertiesArrayAccessTypeProviderTest : BasePlatformTestCase() {
         }
     }
 
+    fun testDeferredCompletionReturnsNullInDumbMode() {
+        val encoded = PropertiesArrayAccessTypeCodec.encode("#C\\App\\Support\\PropertyBag", "name")
+
+        DumbModeTestUtils.runInDumbModeSynchronously(project) {
+            assertNull(provider.complete("#Q$encoded", project))
+        }
+    }
+
     fun testKeyReferenceContributorDoesNotCrashInDumbMode() {
         myFixture.addFileToProject(
             "User.php",
