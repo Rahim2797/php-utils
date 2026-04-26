@@ -14,22 +14,8 @@ import com.jetbrains.php.lang.documentation.phpdoc.psi.PhpDocComment
 import com.jetbrains.php.lang.documentation.phpdoc.psi.PhpDocType
 import com.jetbrains.php.lang.documentation.phpdoc.psi.tags.PhpDocParamTag
 import com.jetbrains.php.lang.documentation.phpdoc.psi.tags.PhpDocTag
-import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
-import com.jetbrains.php.lang.psi.elements.AssignmentExpression
-import com.jetbrains.php.lang.psi.elements.Field
-import com.jetbrains.php.lang.psi.elements.FieldReference
+import com.jetbrains.php.lang.psi.elements.*
 import com.jetbrains.php.lang.psi.elements.Function
-import com.jetbrains.php.lang.psi.elements.FunctionReference
-import com.jetbrains.php.lang.psi.elements.Method
-import com.jetbrains.php.lang.psi.elements.MethodReference
-import com.jetbrains.php.lang.psi.elements.ParameterList
-import com.jetbrains.php.lang.psi.elements.ParenthesizedExpression
-import com.jetbrains.php.lang.psi.elements.PhpClass
-import com.jetbrains.php.lang.psi.elements.PhpExpression
-import com.jetbrains.php.lang.psi.elements.PhpReturn
-import com.jetbrains.php.lang.psi.elements.PhpTypedElement
-import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
-import com.jetbrains.php.lang.psi.elements.Variable
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 object MagicTypeTargetResolver {
@@ -42,7 +28,11 @@ object MagicTypeTargetResolver {
             }
         if (localMatches.isNotEmpty()) return localMatches
 
-        val globalType = PropertiesDumbModeGuards.globalTypeOrNull(receiver.type, receiver.project) ?: return emptyList()
+        val receiverType = PropertiesDumbModeGuards.safeExpressionType(
+            receiver,
+            "array access receiver type lookup"
+        ) ?: return emptyList()
+        val globalType = PropertiesDumbModeGuards.globalTypeOrNull(receiverType, receiver.project) ?: return emptyList()
         return MagicTypeParser.extractMatches(globalType, receiver)
     }
 
@@ -233,7 +223,13 @@ object MagicTypeTargetResolver {
                 ) { expression.resolve() } as? Field ?: return emptyList()
                 extractMatchesFromTypedElement(field, expression.project, allowIndexAccess, contextClassOf(field))
             }
-            else -> extractMatchesFromType(expression.type, expression.project, allowIndexAccess, contextClassOf(expression), expression)
+            else -> {
+                val expressionType = PropertiesDumbModeGuards.safeExpressionType(
+                    expression,
+                    "expression type lookup"
+                ) ?: return emptyList()
+                extractMatchesFromType(expressionType, expression.project, allowIndexAccess, contextClassOf(expression), expression)
+            }
         }
     }
 
@@ -243,14 +239,18 @@ object MagicTypeTargetResolver {
         allowIndexAccess: Boolean,
         contextClass: PhpClass?
     ): List<MagicTypeMatch> {
+        val elementTypes = PropertiesDumbModeGuards.safeTypedElementTypes(
+            element,
+            "typed element type lookup"
+        ) ?: return emptyList()
         val matches = MagicTypeMatch.merge(
-            MagicTypeParser.extractMatches(element.type, element) +
-                MagicTypeParser.extractMatches(element.declaredType, element) +
-                MagicTypeParser.extractMatches(element.docType, element)
+            MagicTypeParser.extractMatches(elementTypes.localType, element) +
+                MagicTypeParser.extractMatches(elementTypes.declaredType, element) +
+                MagicTypeParser.extractMatches(elementTypes.docType, element)
         )
         if (matches.isNotEmpty() || !allowIndexAccess) return normalizeMatches(matches, contextClass)
 
-        val globalType = PropertiesDumbModeGuards.globalTypeOrNull(element.type, project) ?: return emptyList()
+        val globalType = PropertiesDumbModeGuards.globalTypeOrNull(elementTypes.localType, project) ?: return emptyList()
         return normalizeMatches(MagicTypeParser.extractMatches(globalType, element), contextClass)
     }
 

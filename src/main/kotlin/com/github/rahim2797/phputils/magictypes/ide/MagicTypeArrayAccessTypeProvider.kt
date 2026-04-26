@@ -35,7 +35,10 @@ class MagicTypeArrayAccessTypeProvider : PhpTypeProvider4 {
             }
         }
 
-        val receiverType = receiver.type
+        val receiverType = PropertiesDumbModeGuards.safeExpressionType(
+            receiver,
+            "array access receiver type lookup"
+        ) ?: return null
         if (receiverType.types.isEmpty()) return null
 
         val result = PhpType()

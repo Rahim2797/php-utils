@@ -6,9 +6,9 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.php.lang.psi.elements.ArrayAccessExpression
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.charset.StandardCharsets
 import java.util.stream.Collectors
 
 abstract class LaravelFixtureTestCase : BasePlatformTestCase() {
@@ -36,6 +36,10 @@ abstract class LaravelFixtureTestCase : BasePlatformTestCase() {
         val access = PsiTreeUtil.findChildOfType(myFixture.file, ArrayAccessExpression::class.java)
         assertNotNull("Expected an array access expression", access)
         return access!!
+    }
+
+    protected fun waitForSmartMode() {
+        DumbService.getInstance(project).waitForSmartMode()
     }
 
     private fun loadLaravelFixtureProject() {

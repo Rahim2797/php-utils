@@ -6,10 +6,18 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.project.Project
 import com.intellij.psi.ResolveResult
+import com.jetbrains.php.lang.psi.elements.PhpExpression
+import com.jetbrains.php.lang.psi.elements.PhpTypedElement
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 object PropertiesDumbModeGuards {
     private val log = Logger.getInstance(PropertiesDumbModeGuards::class.java)
+
+    data class TypedElementTypes(
+        val localType: PhpType,
+        val declaredType: PhpType,
+        val docType: PhpType,
+    )
 
     fun isDumb(project: Project): Boolean = DumbService.isDumb(project)
 
@@ -19,6 +27,38 @@ object PropertiesDumbModeGuards {
 
     fun globalTypeOrNull(type: PhpType, project: Project): PhpType? {
         return safeIdeLookup(project, "global PHP type expansion") { type.global(project) }
+    }
+
+    fun safeExpressionType(
+        expression: PhpExpression,
+        operation: String = "expression type lookup",
+    ): PhpType? {
+        return safeType(expression.project, operation) { expression.type }
+    }
+
+    fun safeTypedElementTypes(
+        element: PhpTypedElement,
+        operation: String = "typed element type lookup",
+    ): TypedElementTypes? {
+        return safeTypedElementTypes(element.project, operation) {
+            TypedElementTypes(
+                localType = element.type,
+                declaredType = element.declaredType,
+                docType = element.docType,
+            )
+        }
+    }
+
+    fun safeType(project: Project, operation: String, action: () -> PhpType): PhpType? {
+        return safeIdeLookup(project, operation, action)
+    }
+
+    fun safeTypedElementTypes(
+        project: Project,
+        operation: String,
+        action: () -> TypedElementTypes,
+    ): TypedElementTypes? {
+        return safeIdeLookup(project, operation, action)
     }
 
     fun <T> safeIdeLookup(project: Project, operation: String, action: () -> T): T? {
@@ -57,11 +97,15 @@ object PropertiesDumbModeGuards {
             val className = current.javaClass.name
             if (className == "com.intellij.psi.stubs.StubTextInconsistencyException") return true
             if (className == "com.intellij.psi.stubs.StubTreeLoader\$StubTreeAndIndexUnmatchCoarseException") return true
+            if (className == "com.intellij.openapi.util.RecursionManager\$CachingPreventedException") return true
+            if (className == "com.intellij.openapi.util.StackOverflowPreventedException") return true
 
             val message = current.message.orEmpty()
             if (message.contains("Outdated stub in index", ignoreCase = true)) return true
             if (message.contains("stub and index do not match", ignoreCase = true)) return true
             if (message.contains("stub text inconsistency", ignoreCase = true)) return true
+            if (message.contains("Caching disabled due to recursion prevention", ignoreCase = true)) return true
+            if (message.contains("cyclic dependencies", ignoreCase = true)) return true
 
             current = current.cause
         }
